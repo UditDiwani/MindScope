@@ -2,6 +2,7 @@ const initTheme = () => {
   const savedTheme = localStorage.getItem("theme") || "light";
   document.documentElement.setAttribute("data-theme", savedTheme);
   updateThemeButton(savedTheme);
+  updateThemeImages(savedTheme);
 };
 
 const updateThemeButton = (theme) => {
@@ -19,12 +20,23 @@ const updateThemeButton = (theme) => {
   });
 };
 
+const updateThemeImages = (theme) => {
+  document.querySelectorAll("[data-theme-image]").forEach((image) => {
+    const imageSource = theme === "dark" ? image.dataset.darkSrc : image.dataset.lightSrc;
+
+    if (imageSource && image.getAttribute("src") !== imageSource) {
+      image.setAttribute("src", imageSource);
+    }
+  });
+};
+
 const toggleTheme = () => {
   const currentTheme = document.documentElement.getAttribute("data-theme") || "light";
   const newTheme = currentTheme === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", newTheme);
   localStorage.setItem("theme", newTheme);
   updateThemeButton(newTheme);
+  updateThemeImages(newTheme);
 };
 
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
