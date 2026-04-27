@@ -27,6 +27,59 @@ const toggleTheme = () => {
   updateThemeButton(newTheme);
 };
 
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const transitionDuration = 280;
+
+const isInternalPageLink = (link) => {
+  if (!link.href || link.target || link.hasAttribute("download")) {
+    return false;
+  }
+
+  const destination = new URL(link.href, window.location.href);
+
+  return (
+    destination.origin === window.location.origin &&
+    destination.pathname !== window.location.pathname
+      ? true
+      : destination.pathname === window.location.pathname && destination.search !== window.location.search
+  );
+};
+
+const navigateWithTransition = (href) => {
+  if (prefersReducedMotion) {
+    window.location.href = href;
+    return;
+  }
+
+  document.body.classList.add("is-page-exiting");
+  window.setTimeout(() => {
+    window.location.href = href;
+  }, transitionDuration);
+};
+
+window.addEventListener("pageshow", () => {
+  document.body.classList.remove("is-page-exiting");
+
+  if (!prefersReducedMotion) {
+    document.body.classList.add("is-transition-ready");
+  }
+});
+
+document.addEventListener("click", (event) => {
+  const link = event.target.closest("a");
+
+  if (!link || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+    return;
+  }
+
+  if (!isInternalPageLink(link)) {
+    return;
+  }
+
+  event.preventDefault();
+  navigateWithTransition(link.href);
+});
+
 document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
   button.addEventListener("click", toggleTheme);
 });
@@ -49,7 +102,7 @@ const demoForm = document.querySelector("[data-demo-form]");
 if (demoForm) {
   demoForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    window.location.href = "./profile.html";
+    navigateWithTransition("./profile.html");
   });
 }
 
@@ -76,6 +129,6 @@ if (formWindow && minimizeWindowButton && restoreWindowButton && closeWindowButt
   });
 
   closeWindowButton.addEventListener("click", () => {
-    window.location.href = "./profile.html";
+    navigateWithTransition("./profile.html");
   });
 }
