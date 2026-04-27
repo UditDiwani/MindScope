@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Secure Login | MindScope</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <div class="page-noise" aria-hidden="true"></div>
+    <main class="auth-layout">
+      <section class="auth-showcase glass-panel">
+        <nav class="top-nav">
+          <a href="./index.html" class="brand-mark">MindScope</a>
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <a href="./profile.html" class="ghost-link">Preview Profile</a>
+            <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
+          </div>
+        </nav>
+
+        <div class="showcase-content">
+          <p class="eyebrow">Secure Access for Repeated Check-Ins</p>
+          <h1>Welcome back to your calm research space.</h1>
+        </div>
+
+        <div class="showcase-image">
+          <img
+            src="./assets/images/focus-garden.svg"
+            alt="Calming illustration showing plants, notes, and a softly glowing laptop"
+          />
+        </div>
+      </section>
+
+      <section class="auth-form-card glass-panel">
+        <div class="form-header">
+          <p class="eyebrow">Account Login</p>
+          <h2>Sign in securely</h2>
+        </div>
+
+        <form class="stack-form" data-demo-form>
+          <label>
+            Institutional email
+            <input type="email" placeholder="researcher@university.edu" required />
+          </label>
+
+          <label>
+            Password
+            <div class="password-row">
+              <input
+                id="password-field"
+                type="password"
+                placeholder="Enter your password"
+                minlength="10"
+                required
+              />
+              <button type="button" class="toggle-button" data-toggle-password>
+                Show
+              </button>
+            </div>
+          </label>
+
+          <label>
+            Verification code
+            <input
+              type="text"
+              inputmode="numeric"
+              maxlength="6"
+              placeholder="Optional MFA code"
+            />
+          </label>
+
+          <div class="check-row">
+            <label class="check-item">
+              <input type="checkbox" />
+              <span>Remember this trusted device</span>
+            </label>
+            <a href="#" class="ghost-link">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="primary-button wide-button">
+            Sign in
+          </button>
+        </form>
+      </section>
+    </main>
+
+    <script src="./assets/app.js"></script>
+  </body>
+</html>

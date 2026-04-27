@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Check-In Form | MindScope</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <div class="page-noise" aria-hidden="true"></div>
+    <main class="form-shell form-reference-shell">
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme" style="position: fixed; top: 24px; right: 24px; z-index: 100;"></button>
+      <section class="reference-intro">
+        <a href="./index.html" class="brand-mark light-brand">MindScope</a>
+      </section>
+
+      <section class="form-window-shell">
+        <div class="form-window" data-form-window>
+          <div class="window-bar">
+            <div class="window-title">Scholar Check-In</div>
+            <div class="window-controls">
+              <button
+                type="button"
+                class="window-control window-minimize"
+                aria-label="Minimize check-in panel"
+                data-window-minimize
+              ></button>
+              <button
+                type="button"
+                class="window-control window-maximize"
+                aria-label="Restore check-in panel"
+                data-window-restore
+              ></button>
+              <button
+                type="button"
+                class="window-control window-close"
+                aria-label="Close check-in panel and return to profile"
+                data-window-close
+              ></button>
+            </div>
+          </div>
+
+          <form class="reference-form" data-form-window-body>
+            <aside class="comfort-bubble">
+              <img
+                src="./assets/images/calm-companion.svg"
+                alt="Pixel-style forest companion illustration"
+              />
+            </aside>
+
+            <div class="question-stack">
+              <section class="question-block">
+                <label>
+                  <span class="question-label">What stage of research are you currently in?</span>
+                  <select>
+                    <option>Coursework</option>
+                    <option>Proposal phase</option>
+                    <option>Data collection</option>
+                    <option>Writing phase</option>
+                  </select>
+                </label>
+              </section>
+
+              <section class="question-block">
+                <label>
+                  <span class="question-label">How would you describe your stress level this week?</span>
+                  <div class="answer-box">
+                    <input type="range" min="1" max="10" value="6" />
+                    <span>1 = calm, 10 = overwhelmed</span>
+                  </div>
+                </label>
+              </section>
+
+              <section class="question-block">
+                <label>
+                  <span class="question-label">How many hours of restful sleep are you getting on average?</span>
+                  <input type="number" min="0" max="24" step="0.5" placeholder="6.5 hours" />
+                </label>
+              </section>
+
+              <section class="question-block">
+                <label>
+                  <span class="question-label">What has felt emotionally heavy lately?</span>
+                  <textarea
+                    rows="5"
+                    placeholder="Write about stressors, pressure, isolation, or anything that has been weighing on you..."
+                  ></textarea>
+                </label>
+              </section>
+
+              <section class="question-block">
+                <label>
+                  <span class="question-label">What has helped you feel supported or grounded?</span>
+                  <textarea
+                    rows="5"
+                    placeholder="Mention routines, people, small moments, hobbies, or comforting habits..."
+                  ></textarea>
+                </label>
+              </section>
+
+              <section class="question-block inline-options">
+                <label class="check-item">
+                  <input type="checkbox" checked />
+                  <span>Store this response for future progress tracking</span>
+                </label>
+                <label class="check-item">
+                  <input type="checkbox" />
+                  <span>Send me a reminder for the next check-in</span>
+                </label>
+              </section>
+
+              <div class="form-actions reference-actions">
+                <a class="ghost-link light-link" href="./profile.html">Preview progress page</a>
+                <button type="submit" class="primary-button">Submit check-in</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+    <script src="./assets/app.js"></script>
+  </body>
+</html>
