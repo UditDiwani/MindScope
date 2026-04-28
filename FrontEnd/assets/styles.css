@@ -123,10 +123,15 @@
 }
 
 [data-theme="dark"] .form-window {
-  border-color: #f1f6ef;
-  background:
-    linear-gradient(180deg, rgba(31, 58, 41, 0.36) 0 16px, transparent 16px),
-    linear-gradient(180deg, #08100b, #09120d);
+  /* border-color: #f1f6ef; */
+  /* Use a centered, covering background image with a dark overlay for legibility. */
+  background-image:
+    linear-gradient(180deg, rgba(6, 20, 16, 0.48), rgba(6, 20, 16, 0.12)),
+    url('./images/background.jpg');
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-blend-mode: overlay;
   box-shadow: inset 0 0 0 4px rgba(23, 62, 36, 0.9);
 }
 
@@ -170,6 +175,20 @@
   background:
     linear-gradient(180deg, #274d35, #173524);
   box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.22);
+}
+
+[data-theme="dark"] .sheet-tab,
+[data-theme="dark"] .sheet-heading {
+  border-color: #f1f6ef;
+  color: #f3faec;
+  background:
+    linear-gradient(180deg, #274d35, #173524);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.22);
+}
+
+[data-theme="dark"] .sheet-tab.is-active {
+  background:
+    linear-gradient(180deg, #3e7d4e, #295c39);
 }
 
 [data-theme="dark"] .reference-form input,
@@ -878,10 +897,17 @@ textarea:focus {
   position: relative;
   z-index: 1;
   border: 4px solid #1b5e20;
-  background:
-    linear-gradient(180deg, rgba(200, 230, 201, 0.4) 0 16px, transparent 16px),
-    linear-gradient(180deg, #f1f8f4, #e8f5e9);
+  /* Keep the light theme appearance but allow a background image with a light overlay. */
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0 16px, transparent 16px),
+    url('./images/background.jpg');
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-blend-mode: overlay;
   min-height: 760px;
+  height: 760px;
+  overflow: hidden;
   box-shadow: inset 0 0 0 4px rgba(76, 175, 80, 0.3);
 }
 
@@ -968,6 +994,9 @@ textarea:focus {
 .reference-form {
   position: relative;
   padding: 36px 48px 48px 190px;
+  height: calc(100% - 44px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .form-window.is-minimized {
@@ -987,6 +1016,63 @@ textarea:focus {
   margin: 0 auto;
   display: grid;
   gap: 28px;
+}
+
+.sheet-nav {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(42px, 1fr));
+  gap: 10px;
+}
+
+.sheet-tab {
+  min-height: 44px;
+  border: 3px solid #1b5e20;
+  border-radius: 0;
+  background: linear-gradient(180deg, #f1f8f4, #e8f5e9);
+  color: #1b5e20;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: inset 0 -4px 0 rgba(27, 94, 32, 0.08);
+}
+
+.sheet-tab.is-active {
+  background: linear-gradient(180deg, #c8e6c9, #a5d6a7);
+  box-shadow: inset 0 -4px 0 rgba(27, 94, 32, 0.18);
+}
+
+.question-sheet {
+  display: grid;
+  gap: 22px;
+  align-content: start;
+  min-height: 0;
+}
+
+.question-sheet[hidden] {
+  display: none;
+}
+
+.sheet-heading {
+  border: 3px solid #1b5e20;
+  padding: 0.85rem 1rem;
+  color: #1b5e20;
+  background: linear-gradient(180deg, #c8e6c9, #a5d6a7);
+  box-shadow: inset 0 -4px 0 rgba(27, 94, 32, 0.15);
+}
+
+.sheet-heading span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sheet-heading h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 .question-block {
@@ -1039,6 +1125,23 @@ textarea:focus {
   background-size: 8px 8px, 8px 8px;
   background-repeat: no-repeat;
   padding-right: 45px;
+}
+
+/* Ensure dropdown list items are readable in both themes */
+.reference-form select option {
+  color: #1b5e20;
+  background-color: #f1f8f4;
+}
+
+/* Dark theme: explicit option colors */
+[data-theme="dark"] .reference-form select option {
+  color: #f6fbf8;
+  background-color: #0a110d;
+}
+
+/* Hide IE/Edge native dropdown arrow when custom styling is used */
+.reference-form select::-ms-expand {
+  display: none;
 }
 
 .answer-box {
@@ -1120,6 +1223,30 @@ textarea:focus {
 
 .reference-actions {
   justify-content: space-between;
+  gap: 12px;
+}
+
+.reference-actions .sheet-next,
+.reference-actions .sheet-submit {
+  margin-left: auto;
+}
+
+.reference-actions [disabled] {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.reference-actions .sheet-submit.is-locked {
+  filter: blur(1.6px);
+  opacity: 0.54;
+  transform: none;
+}
+
+.reference-actions button.ghost-link {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0.9rem 0;
 }
 
 .form-hero img {
@@ -1240,6 +1367,7 @@ input[type="range"] {
 
   .form-window {
     min-height: auto;
+    height: auto;
   }
 
   .window-controls {

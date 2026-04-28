@@ -55,69 +55,294 @@
             </aside>
 
             <div class="question-stack">
-              <section class="question-block">
-                <label>
-                  <span class="question-label">What stage of research are you currently in?</span>
-                  <select>
-                    <option>Coursework</option>
-                    <option>Proposal phase</option>
-                    <option>Data collection</option>
-                    <option>Writing phase</option>
-                  </select>
-                </label>
+              <div class="sheet-nav" role="tablist" aria-label="Questionnaire sections">
+                <button type="button" class="sheet-tab is-active" data-sheet-tab="0" role="tab" aria-selected="true">1</button>
+                <button type="button" class="sheet-tab" data-sheet-tab="1" role="tab" aria-selected="false">2</button>
+                <button type="button" class="sheet-tab" data-sheet-tab="2" role="tab" aria-selected="false">3</button>
+                <button type="button" class="sheet-tab" data-sheet-tab="3" role="tab" aria-selected="false">4</button>
+                <button type="button" class="sheet-tab" data-sheet-tab="4" role="tab" aria-selected="false">5</button>
+              </div>
+
+              <section class="question-sheet is-active" data-question-sheet>
+                <div class="sheet-heading">
+                  <span>Sheet 1 of 5</span>
+                  <h2>Demographic Information</h2>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">Age</span>
+                    <select required>
+                      <option value="" selected disabled>Select age range</option>
+                      <option>21-25</option>
+                      <option>26-30</option>
+                      <option>31-35</option>
+                      <option>36-40</option>
+                      <option>40+</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">Gender</span>
+                    <select required>
+                      <option value="" selected disabled>Select gender</option>
+                      <option>Male</option>
+                      <option>Female</option>
+                      <option>Prefer not to say</option>
+                      <option>Other</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">Marital Status</span>
+                    <select required>
+                      <option value="" selected disabled>Select marital status</option>
+                      <option>Single</option>
+                      <option>Married</option>
+                      <option>Prefer not to say</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">Field of Research</span>
+                    <select required>
+                      <option value="" selected disabled>Select field</option>
+                      <option>Engineering / Technology</option>
+                      <option>Sciences</option>
+                      <option>Social Sciences</option>
+                      <option>Humanities</option>
+                      <option>Management / Commerce</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">Year of Research</span>
+                    <select required>
+                      <option value="" selected disabled>Select year</option>
+                      <option>1st year</option>
+                      <option>2nd year</option>
+                      <option>3rd year</option>
+                      <option>4th year</option>
+                      <option>5th year or above</option>
+                    </select>
+                  </label>
+                </div>
               </section>
 
-              <section class="question-block">
-                <label>
-                  <span class="question-label">How would you describe your stress level this week?</span>
-                  <div class="answer-box">
-                    <input type="range" min="1" max="10" value="6" />
-                    <span>1 = calm, 10 = overwhelmed</span>
-                  </div>
-                </label>
+              <section class="question-sheet" data-question-sheet hidden>
+                <div class="sheet-heading">
+                  <span>Sheet 2 of 5</span>
+                  <h2>Academic Environment</h2>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">How satisfied/connected are you with your current research field?</span>
+                    <select required>
+                      <option value="" selected disabled>Select rating</option>
+                      <option>1 - Very dissatisfied</option>
+                      <option>2 - Dissatisfied</option>
+                      <option>3 - Neutral</option>
+                      <option>4 - Satisfied</option>
+                      <option>5 - Very satisfied</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">How satisfied are you with your current research progress?</span>
+                    <div class="answer-box">
+                      <input type="range" min="1" max="5" value="3" required />
+                      <span>1 = Very dissatisfied, 5 = Very satisfied</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">How supportive do you find your research supervisor?</span>
+                    <div class="answer-box">
+                      <input type="range" min="1" max="5" value="3" required />
+                      <span>1 = Not supportive, 5 = Very supportive</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">How often do you feel overwhelmed by your research workload?</span>
+                    <select required>
+                      <option value="" selected disabled>Select frequency</option>
+                      <option>Never</option>
+                      <option>Rarely</option>
+                      <option>Sometimes</option>
+                      <option>Often</option>
+                      <option>Always</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">How confident do you feel about completing your research successfully?</span>
+                    <div class="answer-box">
+                      <input type="range" min="1" max="5" value="3" required />
+                      <span>1 = Not confident at all, 5 = Very confident</span>
+                    </div>
+                  </label>
+                </div>
               </section>
 
-              <section class="question-block">
-                <label>
-                  <span class="question-label">How many hours of restful sleep are you getting on average?</span>
-                  <input type="number" min="0" max="24" step="0.5" placeholder="6.5 hours" />
-                </label>
+              <section class="question-sheet" data-question-sheet hidden>
+                <div class="sheet-heading">
+                  <span>Sheet 3 of 5</span>
+                  <h2>Lifestyle and Support System</h2>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">How often do you engage in physical exercise or recreational activities?</span>
+                    <select required>
+                      <option value="" selected disabled>Select frequency</option>
+                      <option>Daily</option>
+                      <option>Several times a week</option>
+                      <option>Once a week</option>
+                      <option>Rarely</option>
+                      <option>Never</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">How strong is your support system (friends, family, colleagues)?</span>
+                    <div class="answer-box">
+                      <input type="range" min="1" max="5" value="3" required />
+                      <span>1 = Very weak support, 5 = Very strong support</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">How often do you feel a lack of work-life balance due to research commitments?</span>
+                    <select required>
+                      <option value="" selected disabled>Select frequency</option>
+                      <option>Never</option>
+                      <option>Rarely</option>
+                      <option>Sometimes</option>
+                      <option>Often</option>
+                      <option>Always</option>
+                    </select>
+                  </label>
+                </div>
               </section>
 
-              <section class="question-block">
-                <label>
-                  <span class="question-label">What has felt emotionally heavy lately?</span>
-                  <textarea
-                    rows="5"
-                    placeholder="Write about stressors, pressure, isolation, or anything that has been weighing on you..."
-                  ></textarea>
-                </label>
+              <section class="question-sheet" data-question-sheet hidden>
+                <div class="sheet-heading">
+                  <span>Sheet 4 of 5</span>
+                  <h2>Well-being Indicators</h2>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">How frequently do you feel stressed due to research-related responsibilities?</span>
+                    <div class="answer-box">
+                      <input type="range" min="1" max="5" value="3" required />
+                      <span>1 = Never, 5 = Very frequently</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">In the past month, how often have you felt anxious about your academic future?</span>
+                    <select required>
+                      <option value="" selected disabled>Select frequency</option>
+                      <option>Never</option>
+                      <option>Rarely</option>
+                      <option>Sometimes</option>
+                      <option>Often</option>
+                      <option>Always</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">Overall, how would you rate your current mental well-being?</span>
+                    <div class="answer-box">
+                      <input type="range" min="1" max="10" value="5" required />
+                      <span>1 = Very poor, 10 = Excellent</span>
+                    </div>
+                  </label>
+                </div>
               </section>
 
-              <section class="question-block">
-                <label>
-                  <span class="question-label">What has helped you feel supported or grounded?</span>
-                  <textarea
-                    rows="5"
-                    placeholder="Mention routines, people, small moments, hobbies, or comforting habits..."
-                  ></textarea>
-                </label>
-              </section>
+              <section class="question-sheet" data-question-sheet hidden>
+                <div class="sheet-heading">
+                  <span>Sheet 5 of 5</span>
+                  <h2>Personal Experiences</h2>
+                </div>
 
-              <section class="question-block inline-options">
-                <label class="check-item">
-                  <input type="checkbox" checked />
-                  <span>Store this response for future progress tracking</span>
-                </label>
-                <label class="check-item">
-                  <input type="checkbox" />
-                  <span>Send me a reminder for the next check-in</span>
-                </label>
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">What are the biggest challenges you face during your research journey?</span>
+                    <textarea
+                      rows="5"
+                      placeholder="Share the academic, personal, or emotional challenges you are facing..."
+                      required
+                    ></textarea>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">What factors help you cope with stress during your research?</span>
+                    <textarea
+                      rows="5"
+                      placeholder="Mention routines, people, activities, or strategies that help you cope..."
+                      required
+                    ></textarea>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">If you could change one thing about the research environment at your institution, what would it be?</span>
+                    <textarea
+                      rows="5"
+                      placeholder="Describe one institutional change that would support research scholars better..."
+                      required
+                    ></textarea>
+                  </label>
+                </div>
+
+                <div class="question-block">
+                  <label>
+                    <span class="question-label">If you could give one piece of advice to your past self, what would it be?</span>
+                    <textarea
+                      rows="4"
+                      placeholder="Write the advice you would give yourself at the start of your research journey..."
+                      required
+                    ></textarea>
+                  </label>
+                </div>
               </section>
 
               <div class="form-actions reference-actions">
-                <a class="ghost-link light-link" href="./profile.html">Preview progress page</a>
-                <button type="submit" class="primary-button">Submit check-in</button>
+                <button type="button" class="ghost-link light-link sheet-back" data-sheet-back disabled>Back</button>
+                <button type="button" class="primary-button sheet-next" data-sheet-next>Next sheet</button>
+                <button type="submit" class="primary-button sheet-submit is-locked" data-sheet-submit hidden disabled aria-disabled="true">Submit check-in</button>
               </div>
             </div>
           </form>
