@@ -119,9 +119,15 @@ if (demoForm) {
 }
 
 const formWindow = document.querySelector("[data-form-window]");
+const referenceForm = document.querySelector(".reference-form");
 const minimizeWindowButton = document.querySelector("[data-window-minimize]");
 const restoreWindowButton = document.querySelector("[data-window-restore]");
 const closeWindowButton = document.querySelector("[data-window-close]");
+const questionSheets = Array.from(document.querySelectorAll("[data-question-sheet]"));
+const sheetTabs = Array.from(document.querySelectorAll("[data-sheet-tab]"));
+const sheetBackButton = document.querySelector("[data-sheet-back]");
+const sheetNextButton = document.querySelector("[data-sheet-next]");
+const sheetSubmitButton = document.querySelector("[data-sheet-submit]");
 
 if (formWindow && minimizeWindowButton && restoreWindowButton && closeWindowButton) {
   const setMinimizedState = (isMinimized) => {
@@ -143,4 +149,72 @@ if (formWindow && minimizeWindowButton && restoreWindowButton && closeWindowButt
   closeWindowButton.addEventListener("click", () => {
     navigateWithTransition("./profile.html");
   });
+}
+
+if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextButton && sheetSubmitButton) {
+  let activeSheet = 0;
+
+  const formFields = referenceForm
+    ? Array.from(referenceForm.querySelectorAll("select, textarea, input"))
+    : [];
+
+  const updateSubmitState = () => {
+    const isComplete = formFields.every((field) => {
+      if (field.type === "range") {
+        return field.value !== "";
+      }
+
+      return field.value.trim() !== "";
+    });
+
+    sheetSubmitButton.disabled = !isComplete;
+    sheetSubmitButton.classList.toggle("is-locked", !isComplete);
+    sheetSubmitButton.setAttribute("aria-disabled", isComplete ? "false" : "true");
+  };
+
+  const setActiveSheet = (index) => {
+    activeSheet = Math.max(0, Math.min(index, questionSheets.length - 1));
+
+    questionSheets.forEach((sheet, sheetIndex) => {
+      const isActive = sheetIndex === activeSheet;
+      sheet.classList.toggle("is-active", isActive);
+      sheet.hidden = !isActive;
+    });
+
+    sheetTabs.forEach((tab, tabIndex) => {
+      const isActive = tabIndex === activeSheet;
+      tab.classList.toggle("is-active", isActive);
+      tab.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+
+    sheetBackButton.disabled = activeSheet === 0;
+    sheetNextButton.hidden = activeSheet === questionSheets.length - 1;
+    sheetSubmitButton.hidden = activeSheet !== questionSheets.length - 1;
+
+    if (referenceForm) {
+      referenceForm.scrollTop = 0;
+    }
+  };
+
+  formFields.forEach((field) => {
+    field.addEventListener("input", updateSubmitState);
+    field.addEventListener("change", updateSubmitState);
+  });
+
+  sheetTabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => {
+      setActiveSheet(index);
+    });
+  });
+
+  sheetBackButton.addEventListener("click", () => {
+    setActiveSheet(activeSheet - 1);
+  });
+
+  sheetNextButton.addEventListener("click", () => {
+    setActiveSheet(activeSheet + 1);
+  });
+
+  setActiveSheet(0);
+  updateSubmitState();
 }
