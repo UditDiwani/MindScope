@@ -112,13 +112,87 @@ if (toggleButton && passwordField) {
 const demoForm = document.querySelector("[data-demo-form]");
 
 if (demoForm) {
-  demoForm.addEventListener("submit", (event) => {
+  demoForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    navigateWithTransition("./profile.html");
+
+    const emailField = demoForm.querySelector('input[type="email"]');
+    const submitButton = demoForm.querySelector('button[type="submit"]');
+    const email = emailField ? emailField.value.trim() : "";
+    const password = passwordField ? passwordField.value : "";
+
+    if (!email || !password) {
+      return;
+    }
+
+    const originalButtonText = submitButton ? submitButton.textContent : "";
+
+    try {
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Signing in...";
+      }
+
+      const response = await fetch("http://localhost:3000/api/auth/authenticate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to sign in");
+      }
+
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem(
+        "authUser",
+        JSON.stringify({ id: data._id, email: data.email, isNewUser: data.isNewUser })
+      );
+      navigateWithTransition(data.isNewUser ? "./form.html" : "./profile.html");
+    } catch (error) {
+      window.alert(error.message);
+
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalButtonText;
+      }
+    }
   });
 }
 
+const bgFrame = document.querySelector("[data-bg-frame-animation]");
+
+if (bgFrame) {
+  const frameCount = Number(bgFrame.dataset.frameCount) || 36;
+  const framePath = "./assets/images/BG-animation-frames";
+  const frameRate = 12;
+  const frameDuration = 1000 / frameRate;
+  const frameImages = Array.from({ length: frameCount }, (_, index) => {
+    const image = new Image();
+    image.src = `${framePath}/frame_${String(index).padStart(3, "0")}.png`;
+    return image;
+  });
+  let activeFrame = 0;
+  let lastFrameTime = 0;
+
+  const animateBgFrame = (timestamp) => {
+    if (timestamp - lastFrameTime >= frameDuration) {
+      activeFrame = (activeFrame + 1) % frameCount;
+      bgFrame.src = frameImages[activeFrame].src;
+      lastFrameTime = timestamp;
+    }
+
+    window.requestAnimationFrame(animateBgFrame);
+  };
+
+  window.requestAnimationFrame(animateBgFrame);
+}
+
 const formWindow = document.querySelector("[data-form-window]");
+const formWindowShell = document.querySelector("[data-form-window-shell]");
 const referenceForm = document.querySelector(".reference-form");
 const minimizeWindowButton = document.querySelector("[data-window-minimize]");
 const restoreWindowButton = document.querySelector("[data-window-restore]");
@@ -132,6 +206,9 @@ const sheetSubmitButton = document.querySelector("[data-sheet-submit]");
 if (formWindow && minimizeWindowButton && restoreWindowButton && closeWindowButton) {
   const setMinimizedState = (isMinimized) => {
     formWindow.classList.toggle("is-minimized", isMinimized);
+    if (formWindowShell) {
+      formWindowShell.classList.toggle("is-minimized-shell", isMinimized);
+    }
     minimizeWindowButton.disabled = isMinimized;
     restoreWindowButton.disabled = !isMinimized;
   };

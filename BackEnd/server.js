@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const dns = require('dns');
+const authRoutes = require('./routes/authRoutes');
 
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 dotenv.config();
@@ -10,8 +11,8 @@ const app = express();
 app.use(express.json());
 
 const allowedOrigins = [
-  'http://127.0.0.1:5500',   // live server
-  'http://localhost:5500',   // some setups use localhost
+  'http://127.0.0.1:5500', // live server
+  'http://localhost:5500',
 ];
 
 app.use(cors({
@@ -36,6 +37,8 @@ const PORT = process.env.PORT || 3000;
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });
+
+app.use('/api/auth', authRoutes);
 
 const startServer = async () => {
   try {

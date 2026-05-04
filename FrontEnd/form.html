@@ -12,7 +12,7 @@
     />
     <link rel="stylesheet" href="./assets/styles.css" />
   </head>
-  <body>
+  <body class="form-page">
     <div class="page-noise" aria-hidden="true"></div>
     <main class="form-shell form-reference-shell">
       <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme" style="position: fixed; top: 24px; right: 24px; z-index: 100;"></button>
@@ -20,8 +20,16 @@
         <a href="./index.html" class="brand-mark light-brand">MindScope</a>
       </section>
 
-      <section class="form-window-shell">
+      <section class="form-window-shell" data-form-window-shell>
         <div class="form-window" data-form-window>
+          <img
+            class="form-bg-frame"
+            src="./assets/images/BG-animation-frames/frame_000.png"
+            alt=""
+            aria-hidden="true"
+            data-bg-frame-animation
+            data-frame-count="36"
+          />
           <div class="window-bar">
             <div class="window-title">Scholar Check-In</div>
             <div class="window-controls">
