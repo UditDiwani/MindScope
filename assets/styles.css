@@ -124,15 +124,12 @@
 
 [data-theme="dark"] .form-window {
   /* border-color: #f1f6ef; */
-  /* Use a centered, covering background image with a dark overlay for legibility. */
-  background-image:
-    linear-gradient(180deg, rgba(6, 20, 16, 0.48), rgba(6, 20, 16, 0.12)),
-    url('./images/background.jpg');
-  background-size: cover, cover;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
-  background-blend-mode: overlay;
+  background: #0d1a14;
   box-shadow: inset 0 0 0 4px rgba(23, 62, 36, 0.9);
+}
+
+[data-theme="dark"] .form-window::before {
+  background: linear-gradient(180deg, rgba(6, 20, 16, 0.58), rgba(6, 20, 16, 0.16));
 }
 
 [data-theme="dark"] .window-bar {
@@ -291,6 +288,10 @@ body {
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.9), transparent 32%),
     radial-gradient(circle at right 18%, rgba(255, 152, 0, 0.15), transparent 24%),
     linear-gradient(135deg, var(--bg-main), var(--bg-secondary));
+}
+
+body.form-page {
+  overflow: auto;
 }
 
 body.is-transition-ready {
@@ -834,12 +835,16 @@ textarea:focus {
 
 .form-reference-shell {
   width: min(1320px, calc(100% - 2rem));
-  padding-top: 24px;
+  min-height: 100vh;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .reference-intro {
   width: min(760px, 100%);
-  margin-bottom: 18px;
+  margin-bottom: 10px;
   color: #1b5e20;
   text-shadow: 0 2px 0 rgba(255, 255, 255, 0.5);
 }
@@ -855,7 +860,8 @@ textarea:focus {
 
 .form-window-shell {
   position: relative;
-  padding: 18px;
+  min-height: 0;
+  padding: 12px;
   border-radius: 20px;
   background:
     linear-gradient(180deg, rgba(76, 175, 80, 0.08), rgba(76, 175, 80, 0) 16%),
@@ -893,25 +899,57 @@ textarea:focus {
   image-rendering: pixelated;
 }
 
+.form-window-shell.is-minimized-shell {
+  align-self: start;
+  justify-self: center;
+  width: min(560px, 100%);
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.form-window-shell.is-minimized-shell::before,
+.form-window-shell.is-minimized-shell::after {
+  display: none;
+}
+
 .form-window {
   position: relative;
   z-index: 1;
   border: 4px solid #1b5e20;
-  /* Keep the light theme appearance but allow a background image with a light overlay. */
-  background-image:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0 16px, transparent 16px),
-    url('./images/background.jpg');
-  background-size: cover, cover;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
-  background-blend-mode: overlay;
-  min-height: 760px;
-  height: 760px;
+  background: #e8f5e9;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
   box-shadow: inset 0 0 0 4px rgba(76, 175, 80, 0.3);
 }
 
+.form-window::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.form-bg-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
 .window-bar {
+  position: relative;
+  z-index: 2;
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -993,6 +1031,7 @@ textarea:focus {
 
 .reference-form {
   position: relative;
+  z-index: 2;
   padding: 36px 48px 48px 190px;
   height: calc(100% - 44px);
   overflow-y: auto;
@@ -1001,8 +1040,11 @@ textarea:focus {
 
 .form-window.is-minimized {
   min-height: 0;
+  height: auto;
 }
 
+.form-window.is-minimized::before,
+.form-window.is-minimized .form-bg-frame,
 .form-window.is-minimized .reference-form {
   display: none;
 }
@@ -1343,6 +1385,15 @@ input[type="range"] {
   .form-shell,
   .auth-layout {
     width: min(100% - 1rem, 100%);
+  }
+
+  body.form-page {
+    overflow: auto;
+  }
+
+  .form-reference-shell {
+    min-height: auto;
+    display: block;
   }
 
   .hero-card,
