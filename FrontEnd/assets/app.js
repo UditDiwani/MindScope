@@ -69,7 +69,7 @@ const navigateWithTransition = (href) => {
   }, transitionDuration);
 };
 
-const API_BASE_URL = "http://localhost:3000/api/auth";
+const API_BASE_URL = "https://mindscope-nx7y.onrender.com/api/auth";
 const currentPage = window.location.pathname.split("/").pop() || "index.html";
 
 const getStoredUser = () => {
@@ -233,7 +233,7 @@ if (demoForm) {
         submitButton.textContent = "Signing in...";
       }
 
-      const response = await fetch("http://localhost:3000/api/auth/authenticate", {
+      const response = await fetch(`${API_BASE_URL}/authenticate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
