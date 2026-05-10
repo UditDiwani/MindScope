@@ -19,7 +19,7 @@
         <div>
           <a href="./index.html" class="brand-mark">MindScope</a>
           <p class="eyebrow">User Profile and Time Tracking</p>
-          <h1>Your well-being progress, observed gently over time.</h1>
+          <h1 data-profile-heading>Your well-being progress, observed gently over time.</h1>
         </div>
         <div class="header-actions">
           <a class="secondary-button" href="./form.html">New Check-In</a>
@@ -45,17 +45,17 @@
 
         <article class="summary-card">
           <p class="metric-label">Check-in streak</p>
-          <h2>11 sessions</h2>
+          <h2 data-profile-streak>0 sessions</h2>
         </article>
 
         <article class="summary-card">
           <p class="metric-label">Latest well-being score</p>
-          <h2>74 / 100</h2>
+          <h2 data-profile-score>0 / 100</h2>
         </article>
 
         <article class="summary-card">
           <p class="metric-label">Reminder preference</p>
-          <h2>Weekly prompts</h2>
+          <h2 data-profile-preference>Weekly prompts</h2>
         </article>
       </section>
 
@@ -64,9 +64,9 @@
           <div class="panel-heading">
             <div>
               <p class="eyebrow">Progress Over Time</p>
-              <h2>Sample well-being trend</h2>
+              <h2>Well-being trend</h2>
             </div>
-            <span class="status-pill">Preview Data</span>
+            <span class="status-pill" data-profile-trend-status>Live Data</span>
           </div>
 
           <div class="line-chart" aria-label="Illustrative trend chart">
@@ -102,24 +102,7 @@
           </div>
 
           <div class="timeline">
-            <div class="timeline-item">
-              <span class="timeline-dot"></span>
-              <div>
-                <h3>April 18</h3>
-              </div>
-            </div>
-            <div class="timeline-item">
-              <span class="timeline-dot"></span>
-              <div>
-                <h3>April 11</h3>
-              </div>
-            </div>
-            <div class="timeline-item">
-              <span class="timeline-dot"></span>
-              <div>
-                <h3>April 4</h3>
-              </div>
-            </div>
+            <div data-profile-timeline></div>
           </div>
         </article>
 
@@ -131,28 +114,24 @@
             </div>
           </div>
 
-          <form class="stack-form compact-form">
+          <form class="stack-form compact-form" data-preferences-form>
             <label>
               Preferred check-in frequency
-              <select>
+              <select data-preference-select>
                 <option>Weekly</option>
                 <option>Twice a week</option>
                 <option>Monthly</option>
               </select>
             </label>
-            <label>
-              Notification style
-              <select>
-                <option>Email reminder</option>
-                <option>Dashboard-only</option>
-                <option>SMS reminder</option>
-              </select>
+            <label class="check-item">
+              <input type="checkbox" checked data-email-reminder />
+              <span>Email reminder</span>
             </label>
             <label class="check-item">
               <input type="checkbox" checked />
               <span>Show trend comparison with previous sessions</span>
             </label>
-            <button type="button" class="primary-button">Save Preferences</button>
+            <button type="submit" class="primary-button">Save Preferences</button>
           </form>
         </article>
       </section>

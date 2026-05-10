@@ -8,6 +8,11 @@ const user_schema = new mongoose.Schema({
         required: true,
         unique: true,
     },
+    name: {
+        type: String,
+        trim: true,
+        default: ''
+    },
     password: {
         type: String,
         required: true,
@@ -28,9 +33,17 @@ const user_schema = new mongoose.Schema({
         type: String,
         default: 'Weekly'
     },
+    emailReminder: {
+        type: Boolean,
+        default: true
+    },
     checkpoints: {
         type: [Date],
         default: []
+    },
+    hasCompletedCheckIn: {
+        type: Boolean,
+        default: false
     },
 }, { timestamps : true});
 
