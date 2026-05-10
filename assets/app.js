@@ -69,6 +69,107 @@ const navigateWithTransition = (href) => {
   }, transitionDuration);
 };
 
+const API_BASE_URL = "http://localhost:3000/api/auth";
+const currentPage = window.location.pathname.split("/").pop() || "index.html";
+
+const getStoredUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem("authUser") || "null");
+  } catch (error) {
+    return null;
+  }
+};
+
+const saveStoredUser = (user) => {
+  if (!user) {
+    localStorage.removeItem("authUser");
+    return;
+  }
+
+  localStorage.setItem(
+    "authUser",
+    JSON.stringify({
+      id: user._id || user.id,
+      email: user.email,
+      name: user.name || "",
+      isNewUser: Boolean(user.isNewUser),
+      hasCompletedCheckIn: Boolean(user.hasCompletedCheckIn),
+      checkpoints: user.checkpoints || [],
+      streak: user.streak || 0,
+      last_score: user.last_score || 0,
+      preference: user.preference || "Weekly",
+      emailReminder: user.emailReminder !== false,
+      trend: user.trend || [],
+    })
+  );
+};
+
+const getAuthToken = () => localStorage.getItem("authToken");
+
+const redirectToLogin = () => {
+  if (currentPage !== "login.html") {
+    navigateWithTransition("./login.html");
+  }
+};
+
+const redirectToFirstCheckIn = () => {
+  if (currentPage !== "form.html" && currentPage !== "login.html") {
+    navigateWithTransition("./form.html");
+  }
+};
+
+const enforceCheckInAccess = async () => {
+  const token = getAuthToken();
+  const storedUser = getStoredUser();
+  const requiresAccount = currentPage === "profile.html" || currentPage === "form.html";
+
+  if (requiresAccount && !token) {
+    redirectToLogin();
+    return null;
+  }
+
+  if (token && storedUser && storedUser.hasCompletedCheckIn === false) {
+    redirectToFirstCheckIn();
+    return storedUser;
+  }
+
+  if (!token || currentPage === "login.html") {
+    return storedUser;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem("authToken");
+        saveStoredUser(null);
+        redirectToLogin();
+        return null;
+      }
+
+      throw new Error("Unable to refresh user");
+    }
+
+    const user = await response.json();
+    saveStoredUser(user);
+
+    if (!user.hasCompletedCheckIn) {
+      redirectToFirstCheckIn();
+    }
+
+    return user;
+  } catch (error) {
+    return storedUser;
+  }
+};
+
+const userReady = enforceCheckInAccess();
+
 window.addEventListener("pageshow", () => {
   document.body.classList.remove("is-page-exiting");
 
@@ -147,11 +248,8 @@ if (demoForm) {
       }
 
       localStorage.setItem("authToken", data.token);
-      localStorage.setItem(
-        "authUser",
-        JSON.stringify({ id: data._id, email: data.email, isNewUser: data.isNewUser })
-      );
-      navigateWithTransition(data.isNewUser ? "./form.html" : "./profile.html");
+      saveStoredUser(data);
+      navigateWithTransition(data.hasCompletedCheckIn ? "./profile.html" : "./form.html");
     } catch (error) {
       window.alert(error.message);
 
@@ -235,6 +333,30 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
     ? Array.from(referenceForm.querySelectorAll("select, textarea, input"))
     : [];
 
+  const collectCheckInResponses = () => {
+    const responses = {};
+
+    Array.from(referenceForm.querySelectorAll(".question-block")).forEach((block) => {
+      const label = block.querySelector(".question-label");
+      const field = block.querySelector("select, textarea, input");
+
+      if (!label || !field) {
+        return;
+      }
+
+      if (!field.matches("[data-user-name]")) {
+        responses[label.textContent.trim()] = field.type === "range" ? Number(field.value) : field.value.trim();
+      }
+    });
+
+    return responses;
+  };
+
+  const getCheckInName = () => {
+    const nameField = referenceForm.querySelector("[data-user-name]");
+    return nameField ? nameField.value.trim() : "";
+  };
+
   const updateSubmitState = () => {
     const isComplete = formFields.every((field) => {
       if (field.type === "range") {
@@ -292,6 +414,175 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
     setActiveSheet(activeSheet + 1);
   });
 
+  referenceForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const token = getAuthToken();
+
+    if (!token) {
+      redirectToLogin();
+      return;
+    }
+
+    const originalButtonText = sheetSubmitButton.textContent;
+
+    try {
+      sheetSubmitButton.disabled = true;
+      sheetSubmitButton.textContent = "Saving...";
+
+      const response = await fetch(`${API_BASE_URL}/check-in`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: getCheckInName(),
+          responses: collectCheckInResponses(),
+        }),
+      });
+
+      const user = await response.json();
+
+      if (!response.ok) {
+        throw new Error(user.error || "Unable to save check-in");
+      }
+
+      saveStoredUser(user);
+      navigateWithTransition("./profile.html");
+    } catch (error) {
+      window.alert(error.message);
+      sheetSubmitButton.disabled = false;
+      sheetSubmitButton.textContent = originalButtonText;
+    }
+  });
+
   setActiveSheet(0);
   updateSubmitState();
+}
+
+const formatDate = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+};
+
+const renderProfile = (user) => {
+  if (!user || currentPage !== "profile.html") {
+    return;
+  }
+
+  const heading = document.querySelector("[data-profile-heading]");
+  const streak = document.querySelector("[data-profile-streak]");
+  const score = document.querySelector("[data-profile-score]");
+  const preference = document.querySelector("[data-profile-preference]");
+  const timeline = document.querySelector("[data-profile-timeline]");
+  const preferenceSelect = document.querySelector("[data-preference-select]");
+  const emailReminder = document.querySelector("[data-email-reminder]");
+
+  if (heading && (user.name || user.email)) {
+    heading.textContent = `Welcome, ${user.name || user.email}`;
+  }
+
+  if (streak) {
+    const count = Number(user.streak || 0);
+    streak.textContent = `${count} ${count === 1 ? "session" : "sessions"}`;
+  }
+
+  if (score) {
+    score.textContent = `${Number(user.last_score || 0)} / 100`;
+  }
+
+  if (preference) {
+    preference.textContent = `${user.preference || "Weekly"} prompts`;
+  }
+
+  if (preferenceSelect) {
+    preferenceSelect.value = user.preference || "Weekly";
+  }
+
+  if (emailReminder) {
+    emailReminder.checked = user.emailReminder !== false;
+  }
+
+  if (timeline) {
+    const checkpoints = Array.isArray(user.checkpoints) ? user.checkpoints.slice(-3).reverse() : [];
+
+    timeline.innerHTML = checkpoints.length
+      ? checkpoints
+          .map(
+            (checkpoint) => `
+              <div class="timeline-item">
+                <span class="timeline-dot"></span>
+                <div>
+                  <h3>${formatDate(checkpoint)}</h3>
+                </div>
+              </div>
+            `
+          )
+          .join("")
+      : "<p>No check-ins submitted yet.</p>";
+  }
+};
+
+userReady.then(renderProfile);
+
+const preferencesForm = document.querySelector("[data-preferences-form]");
+
+if (preferencesForm) {
+  preferencesForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const token = getAuthToken();
+    const preferenceSelect = preferencesForm.querySelector("[data-preference-select]");
+    const emailReminder = preferencesForm.querySelector("[data-email-reminder]");
+    const submitButton = preferencesForm.querySelector('button[type="submit"]');
+    const originalButtonText = submitButton ? submitButton.textContent : "";
+
+    if (!token) {
+      redirectToLogin();
+      return;
+    }
+
+    try {
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Saving...";
+      }
+
+      const response = await fetch(`${API_BASE_URL}/preferences`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          preference: preferenceSelect ? preferenceSelect.value : "Weekly",
+          emailReminder: emailReminder ? emailReminder.checked : true,
+        }),
+      });
+
+      const user = await response.json();
+
+      if (!response.ok) {
+        throw new Error(user.error || "Unable to save preferences");
+      }
+
+      saveStoredUser(user);
+      renderProfile(user);
+    } catch (error) {
+      window.alert(error.message);
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalButtonText;
+      }
+    }
+  });
 }
