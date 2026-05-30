@@ -18,7 +18,6 @@
       <header class="dashboard-header glass-panel">
         <div>
           <a href="./index.html" class="brand-mark">MindScope</a>
-          <p class="eyebrow">User Profile and Time Tracking</p>
           <h1 data-profile-heading>Your well-being progress, observed gently over time.</h1>
         </div>
         <div class="header-actions">
@@ -54,6 +53,11 @@
         </article>
 
         <article class="summary-card">
+          <p class="metric-label">Current state of mind</p>
+          <h2 data-profile-sentiment>Neutral</h2>
+        </article>
+
+        <article class="summary-card">
           <p class="metric-label">Reminder preference</p>
           <h2 data-profile-preference>Weekly prompts</h2>
         </article>
@@ -63,7 +67,29 @@
         <article class="panel-card glass-panel">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Progress Over Time</p>
+              <h2>Overall Well-Being</h2>
+              <p class="panel-description">Latest AI-generated score from your most recent check-in, shown on a 0 to 100 scale.</p>
+            </div>
+            <span class="status-pill" data-profile-insight-source>Latest Insight</span>
+          </div>
+
+          <div class="profile-metric-pair">
+            <div>
+              <span>Latest Mental Well-Being Score</span>
+              <strong data-profile-ai-score>-- / 100</strong>
+              <p>Overall score generated from the latest check-in pattern.</p>
+            </div>
+            <div>
+              <span>Current State of Mind</span>
+              <strong data-profile-state-score>Neutral</strong>
+              <p>Sentiment analysis result from the latest reflection text.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel-card glass-panel">
+          <div class="panel-heading">
+            <div>
               <h2>Well-being trend</h2>
             </div>
             <span class="status-pill" data-profile-trend-status>Live Data</span>
@@ -96,7 +122,6 @@
         <article class="panel-card glass-panel">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Reflection Timeline</p>
               <h2>Recent checkpoints</h2>
             </div>
           </div>
@@ -109,7 +134,6 @@
         <article class="panel-card glass-panel">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Personal Settings</p>
               <h2>Tracking preferences</h2>
             </div>
           </div>

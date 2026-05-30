@@ -14,17 +14,23 @@
   </head>
   <body class="landing-shell">
     <div class="page-noise" aria-hidden="true"></div>
-    <header class="top-nav" style="padding: 16px 24px; position: fixed; top: 0; right: 0; z-index: 100;">
+    <header class="top-nav landing-nav">
+      <a href="./index.html" class="brand-mark">MindScope</a>
       <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme"></button>
     </header>
     <main class="landing-page">
-      <section class="hero-card">
+      <section class="hero-card landing-hero">
         <div class="hero-copy">
-          <p class="eyebrow">AI-Based Mental Well-Being Analysis</p>
           <h1>MindScope for Research Scholars</h1>
+          <p class="hero-text">
+            MindScope helps research scholars assess, monitor, and reflect on their mental well-being through structured check-ins, progress tracking, and supportive insights. It brings together questionnaire responses and written reflections to help scholars understand how workload, stress, coping capacity, and mood are changing over time.
+          </p>
+          <p class="hero-text">
+            The platform uses Artificial Intelligence to turn check-in patterns into an overall well-being view, while sentiment analysis reads reflection notes for emotional tone. The goal is to make personal trends easier to understand without requiring technical knowledge from the user.
+          </p>
           <div class="hero-actions">
-            <a class="primary-button" href="./login.html">Open Login</a>
-            <a class="secondary-button" href="./form.html">View Check-In Form</a>
+            <a class="primary-button" href="./login.html">Sign In</a>
+            <a class="secondary-button" href="./form.html">Start Check-In</a>
           </div>
         </div>
         <div class="hero-visual">
@@ -38,18 +44,21 @@
         </div>
       </section>
 
-      <section class="preview-grid">
-        <a class="preview-card" href="./login.html">
-          <span class="preview-tag">Page 1</span>
-          <h2>Secure Login</h2>
+      <section class="landing-card-grid" aria-label="MindScope navigation">
+        <a class="landing-action-card glass-panel" href="./form.html">
+          <span class="preview-tag">Check-In</span>
+          <h2>Submit a well-being check-in</h2>
+          <p>Record current workload, stress, mood, and reflection notes in one guided flow.</p>
         </a>
-        <a class="preview-card" href="./profile.html">
-          <span class="preview-tag">Page 2</span>
-          <h2>Progress Profile</h2>
+        <a class="landing-action-card glass-panel" href="./profile.html">
+          <span class="preview-tag">Profile</span>
+          <h2>Review your progress</h2>
+          <p>See recent scores, sentiment, streaks, and check-in history in a consistent dashboard.</p>
         </a>
-        <a class="preview-card" href="./form.html">
-          <span class="preview-tag">Page 3</span>
-          <h2>Data Collection</h2>
+        <a class="landing-action-card glass-panel" href="./ml-insight.html">
+          <span class="preview-tag">Insights</span>
+          <h2>View latest AI insight</h2>
+          <p>Watch the latest check-in become an overall well-being and state-of-mind summary.</p>
         </a>
       </section>
     </main>

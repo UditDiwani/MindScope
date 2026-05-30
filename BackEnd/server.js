@@ -5,6 +5,8 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const dns = require('dns');
 const authRoutes = require('./routes/authRoutes');
+const predictionRoutes = require('./routes/prediction');
+const sentimentRoutes = require('./routes/sentiment');
 
 dns.setServers(['8.8.8.8', '1.1.1.1']);
 dotenv.config();
@@ -44,6 +46,8 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/predict', predictionRoutes);
+app.use('/api/sentiment', sentimentRoutes);
 
 const startServer = async () => {
   try {

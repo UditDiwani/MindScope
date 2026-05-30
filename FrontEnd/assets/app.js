@@ -69,7 +69,9 @@ const navigateWithTransition = (href) => {
   }, transitionDuration);
 };
 
-const API_BASE_URL = "https://mindscope-nx7y.onrender.com/api/auth";
+const isLocalFrontend = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+const API_ROOT_URL = isLocalFrontend ? "http://127.0.0.1:3000/api" : "https://mindscope-nx7y.onrender.com/api";
+const API_BASE_URL = `${API_ROOT_URL}/auth`;
 const currentPage = window.location.pathname.split("/").pop() || "index.html";
 
 const getStoredUser = () => {
@@ -121,7 +123,7 @@ const redirectToFirstCheckIn = () => {
 const enforceCheckInAccess = async () => {
   const token = getAuthToken();
   const storedUser = getStoredUser();
-  const requiresAccount = currentPage === "profile.html" || currentPage === "form.html";
+  const requiresAccount = currentPage === "profile.html" || currentPage === "form.html" || currentPage === "ml-insight.html";
 
   if (requiresAccount && !token) {
     redirectToLogin();
@@ -333,6 +335,35 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
     ? Array.from(referenceForm.querySelectorAll("select, textarea, input"))
     : [];
 
+  const sumResponses = (responses, prefix, count, reverseScoredItems = []) => {
+    return Array.from({ length: count }, (_, index) => index + 1).reduce((total, itemNumber) => {
+      const value = Number(responses[`${prefix}_${itemNumber}`]);
+      const scoredValue = reverseScoredItems.includes(itemNumber) ? 4 - value : value;
+      return total + scoredValue;
+    }, 0);
+  };
+
+  const roundFeature = (value, digits = 2) => Number(value.toFixed(digits));
+
+  const addCalculatedFeatures = (responses) => {
+    const pssScore = sumResponses(responses, "pss", 10, [4, 5, 7, 8]);
+    const gad7Score = sumResponses(responses, "gad7", 7);
+    const phq9Score = sumResponses(responses, "phq9", 9);
+    const productivityIndex = Number(responses.productivity_index);
+    const copingIndex = Number(responses.coping_index);
+    const stressorIndex = Number(responses.stressor_index);
+
+    responses.pss_score = pssScore;
+    responses.gad7_score = gad7Score;
+    responses.phq9_score = phq9Score;
+    responses.distress_total = pssScore + gad7Score + phq9Score;
+    responses.distress_normalized = roundFeature(((pssScore / 40) + (gad7Score / 21) + (phq9Score / 27)) / 3, 4);
+    responses.coping_productivity_balance = roundFeature(copingIndex - productivityIndex);
+    responses.stressor_coping_gap = roundFeature(stressorIndex - copingIndex);
+
+    return responses;
+  };
+
   const collectCheckInResponses = () => {
     const responses = {};
 
@@ -345,11 +376,13 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
       }
 
       if (!field.matches("[data-user-name]")) {
-        responses[label.textContent.trim()] = field.type === "range" ? Number(field.value) : field.value.trim();
+        const responseKey = field.name || label.textContent.trim();
+        const shouldUseNumber = field.type === "range" || field.type === "number" || field.dataset.numeric === "true";
+        responses[responseKey] = shouldUseNumber ? Number(field.value) : field.value.trim();
       }
     });
 
-    return responses;
+    return addCalculatedFeatures(responses);
   };
 
   const getCheckInName = () => {
@@ -358,7 +391,8 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
   };
 
   const updateSubmitState = () => {
-    const isComplete = formFields.every((field) => {
+    const requiredFields = formFields.filter((field) => field.required);
+    const isComplete = requiredFields.every((field) => {
       if (field.type === "range") {
         return field.value !== "";
       }
@@ -430,6 +464,7 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
       sheetSubmitButton.disabled = true;
       sheetSubmitButton.textContent = "Saving...";
 
+      const responses = collectCheckInResponses();
       const response = await fetch(`${API_BASE_URL}/check-in`, {
         method: "POST",
         headers: {
@@ -438,7 +473,7 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
         },
         body: JSON.stringify({
           name: getCheckInName(),
-          responses: collectCheckInResponses(),
+          responses,
         }),
       });
 
@@ -449,7 +484,8 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
       }
 
       saveStoredUser(user);
-      navigateWithTransition("./profile.html");
+      await generateAndStoreLatestInsight(responses);
+      navigateWithTransition("./ml-insight.html");
     } catch (error) {
       window.alert(error.message);
       sheetSubmitButton.disabled = false;
@@ -497,6 +533,15 @@ const renderProfile = (user) => {
 
   if (score) {
     score.textContent = `${Number(user.last_score || 0)} / 100`;
+    if (Number(user.last_score) <50){
+      score.style.color = "red";
+    }
+    else if(Number(user.last_score) ==50){
+      score.style.color = "yellow";
+    } 
+    else{
+      score.style.color = "green";
+    } 
   }
 
   if (preference) {
@@ -532,6 +577,320 @@ const renderProfile = (user) => {
 };
 
 userReady.then(renderProfile);
+
+const getLastCheckInResponses = () => {
+  try {
+    return JSON.parse(localStorage.getItem("lastCheckInResponses") || "{}");
+  } catch (error) {
+    return {};
+  }
+};
+
+const getLatestInsight = () => {
+  try {
+    return JSON.parse(localStorage.getItem("latestMlInsight") || "null");
+  } catch (error) {
+    return null;
+  }
+};
+
+const saveLatestInsight = (insight) => {
+  localStorage.setItem("latestMlInsight", JSON.stringify(insight));
+};
+
+const getResponseSignature = (responses) => JSON.stringify(responses || {});
+
+const clampScore = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
+
+const getLocalSentiment = (responses) => {
+  const text = getSentimentText(responses).toLowerCase();
+  const positiveWords = ["support", "supported", "cope", "coping", "focused", "calm", "progress", "help", "manageable", "confident", "better"];
+  const negativeWords = ["stress", "deadline", "overwhelmed", "anxious", "tired", "hopeless", "pressure", "conflict", "stuck", "difficult"];
+  const positive = positiveWords.reduce((total, word) => total + (text.includes(word) ? 1 : 0), 0);
+  const negative = negativeWords.reduce((total, word) => total + (text.includes(word) ? 1 : 0), 0);
+
+  if (!text.trim()) {
+    return 0;
+  }
+
+  return Number(((positive - negative) / Math.max(positive + negative, 1)).toFixed(3));
+};
+
+const getLocalWellbeingScore = (responses) => {
+  const distressNormalized = Number(responses.distress_normalized || 0);
+  const copingIndex = Number(responses.coping_index || 3);
+  const productivityIndex = Number(responses.productivity_index || 3);
+  const stressorIndex = Number(responses.stressor_index || 3);
+  const baseScore = 100 - distressNormalized * 70;
+  const supportAdjustment = (copingIndex - 3) * 6 + (productivityIndex - 3) * 4 - (stressorIndex - 3) * 5;
+
+  return Math.round(clampScore(baseScore + supportAdjustment));
+};
+
+const getFactorContributions = (responses) => {
+  const factors = [
+    {
+      label: "Distress total",
+      value: Number(responses.distress_total || 0),
+      impact: Number(responses.distress_total || 0) / 88,
+      direction: "lower",
+    },
+    {
+      label: "Coping capacity",
+      value: Number(responses.coping_index || 0),
+      impact: Math.abs(Number(responses.coping_index || 3) - 3) / 2,
+      direction: "higher",
+    },
+    {
+      label: "Stressor load",
+      value: Number(responses.stressor_index || 0),
+      impact: Math.abs(Number(responses.stressor_index || 3) - 3) / 2,
+      direction: "lower",
+    },
+    {
+      label: "Productivity",
+      value: Number(responses.productivity_index || 0),
+      impact: Math.abs(Number(responses.productivity_index || 3) - 3) / 2,
+      direction: "higher",
+    },
+    {
+      label: "Supervisor guidance",
+      value: Number(responses.supervisor_freq || 0),
+      impact: Math.abs(Number(responses.supervisor_freq || 2.5) - 2.5) / 1.5,
+      direction: "higher",
+    },
+  ];
+
+  return factors
+    .map((factor) => ({ ...factor, impact: clampScore(factor.impact, 0, 1) }))
+    .sort((first, second) => second.impact - first.impact)
+    .slice(0, 4);
+};
+
+const fetchMlPrediction = async (responses) => {
+  try {
+    const response = await fetch(`${API_ROOT_URL}/predict`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ responses }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Prediction unavailable");
+    }
+
+    return await response.json();
+  } catch (error) {
+    return null;
+  }
+};
+
+const getSentimentText = (responses) => {
+  const noteText = `${responses.primary_stressor_note || ""} ${responses.coping_support_note || ""}`.trim();
+
+  if (noteText) {
+    return noteText;
+  }
+
+  return [
+    `Risk level ${responses.risk_level || "not specified"}`,
+    `stress ${responses.pss_score || 0}`,
+    `anxiety ${responses.gad7_score || 0}`,
+    `mood ${responses.phq9_score || 0}`,
+    `coping ${responses.coping_index || 0}`,
+  ].join(" ");
+};
+
+const getStateOfMindLabel = (score) => {
+  if (score >= 0.35) {
+    return "Positive";
+  }
+
+  if (score <= -0.35) {
+    return "Strained";
+  }
+
+  return "Neutral";
+};
+
+const getOverallWellbeingFromPrediction = (prediction) => {
+  const stressScore = Number(prediction.stress_score || 0);
+  const anxietyScore = Number(prediction.anxiety_score || 0);
+  const depressionScore = Number(prediction.depression_score || prediction.wellbeing_score || 0);
+  const normalizedDistress = (stressScore / 40 + anxietyScore / 21 + depressionScore / 27) / 3;
+
+  return Math.round(clampScore(100 - normalizedDistress * 100));
+};
+
+const fetchSentimentScore = async (responses) => {
+  const text = getSentimentText(responses);
+
+  try {
+    const response = await fetch(`${API_ROOT_URL}/sentiment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Sentiment unavailable");
+    }
+
+    const sentiment = await response.json();
+    return Number(sentiment.compound || 0);
+  } catch (error) {
+    return getLocalSentiment(responses);
+  }
+};
+
+const generateAndStoreLatestInsight = async (responses) => {
+  const prediction = await fetchMlPrediction(responses);
+  const sentiment = await fetchSentimentScore(responses);
+  const overallWellbeing = prediction ? getOverallWellbeingFromPrediction(prediction) : getLocalWellbeingScore(responses);
+  const insight = {
+    generatedAt: new Date().toISOString(),
+    responseSignature: getResponseSignature(responses),
+    overallWellbeing,
+    sentimentScore: sentiment,
+    stateOfMind: getStateOfMindLabel(sentiment),
+    source: prediction ? "AI Prediction" : "Local Estimate",
+    prediction,
+    factors: getFactorContributions(responses),
+  };
+
+  localStorage.setItem("lastCheckInResponses", JSON.stringify(responses));
+  saveLatestInsight(insight);
+
+  return insight;
+};
+
+const getOrCreateLatestInsight = async () => {
+  const existingInsight = getLatestInsight();
+  const responses = getLastCheckInResponses();
+
+  if (existingInsight && (!Object.keys(responses).length || existingInsight.responseSignature === getResponseSignature(responses))) {
+    return existingInsight;
+  }
+
+  if (!Object.keys(responses).length) {
+    return null;
+  }
+
+  return generateAndStoreLatestInsight(responses);
+};
+
+const renderInsightSummary = (insight) => {
+  const profileScore = document.querySelector("[data-profile-score]");
+  const profileAiScore = document.querySelector("[data-profile-ai-score]");
+  const profileSentiment = document.querySelector("[data-profile-sentiment]");
+  const profileStateScore = document.querySelector("[data-profile-state-score]");
+  const profileInsightSource = document.querySelector("[data-profile-insight-source]");
+
+  if (!insight) {
+    return;
+  }
+
+  if (profileScore) {
+    profileScore.textContent = `${insight.overallWellbeing} / 100`;
+  }
+
+  if (profileAiScore) {
+    profileAiScore.textContent = `${insight.overallWellbeing} / 100`;
+  }
+
+  if (profileSentiment) {
+    profileSentiment.textContent = insight.stateOfMind;
+  }
+
+  if (profileStateScore) {
+    profileStateScore.textContent = `${insight.stateOfMind} (${Number(insight.sentimentScore).toFixed(2)})`;
+  }
+
+  if (profileInsightSource) {
+    profileInsightSource.textContent = insight.source || "Latest Insight";
+  }
+};
+
+const renderMlInsight = async () => {
+  if (currentPage !== "ml-insight.html") {
+    return;
+  }
+
+  const insight = await getOrCreateLatestInsight();
+  const scoreRing = document.querySelector("[data-score-ring]");
+  const wellbeingScore = document.querySelector("[data-wellbeing-score]");
+  const wellbeingLabel = document.querySelector("[data-wellbeing-label]");
+  const sentimentScore = document.querySelector("[data-sentiment-score]");
+  const factorToggle = document.querySelector("[data-factor-toggle]");
+  const factorPanel = document.querySelector("[data-factor-panel]");
+  const factorList = document.querySelector("[data-factor-list]");
+  const modelSource = document.querySelector("[data-model-source]");
+
+  if (!insight) {
+    if (wellbeingLabel) {
+      wellbeingLabel.textContent = "No check-in found";
+    }
+    return;
+  }
+
+  window.setTimeout(() => {
+    if (scoreRing) {
+      scoreRing.style.setProperty("--score", `${insight.overallWellbeing}%`);
+    }
+
+    if (wellbeingScore) {
+      wellbeingScore.textContent = insight.overallWellbeing;
+    }
+
+    if (wellbeingLabel) {
+      wellbeingLabel.textContent = `${insight.overallWellbeing} / 100`;
+    }
+
+    if (sentimentScore) {
+      sentimentScore.textContent = `${insight.stateOfMind} (${Number(insight.sentimentScore).toFixed(2)})`;
+    }
+
+    if (modelSource) {
+      modelSource.textContent = insight.source || "Latest Insight";
+    }
+  }, 2600);
+
+  if (factorList) {
+    factorList.innerHTML = (insight.factors || [])
+      .map((factor) => {
+        const width = Math.max(10, Math.round(factor.impact * 100));
+        return `
+          <div class="factor-row">
+            <div>
+              <strong>${factor.label}</strong>
+              <span>${factor.direction === "higher" ? "Higher supports score" : "Lower supports score"} - ${factor.value}</span>
+            </div>
+            <div class="factor-meter" aria-hidden="true">
+              <i style="width: ${width}%"></i>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  if (factorToggle && factorPanel) {
+    factorToggle.addEventListener("click", () => {
+      const isHidden = factorPanel.hidden;
+      factorPanel.hidden = !isHidden;
+      factorToggle.textContent = isHidden ? "Hide Details" : "Show Details";
+    });
+  }
+};
+
+renderMlInsight();
+
+if (currentPage === "profile.html") {
+  userReady.then(async () => {
+    const insight = await getOrCreateLatestInsight();
+    renderInsightSummary(insight);
+  });
+}
 
 const preferencesForm = document.querySelector("[data-preferences-form]");
 
