@@ -31,9 +31,11 @@
         <article class="summary-card accent-card">
           <div>
             <p class="metric-label">Current trend</p>
-            <h2>Steady recovery arc</h2>
+            <h2 data-profile-trend-title>Baseline pending</h2>
+            <p class="trend-card-note" data-profile-trend-note>Submit a check-in to start tracking your pattern.</p>
           </div>
           <img
+            data-profile-trend-image
             src="./assets/images/progress-orbit.svg"
             data-theme-image
             data-light-src="./assets/images/progress-orbit.svg"
@@ -95,27 +97,11 @@
             <span class="status-pill" data-profile-trend-status>Live Data</span>
           </div>
 
-          <div class="line-chart" aria-label="Illustrative trend chart">
+          <div class="line-chart" aria-label="Well-being trend chart" data-profile-trend-chart>
             <div class="chart-grid"></div>
-            <svg viewBox="0 0 480 220" role="img" aria-hidden="true">
-              <path
-                d="M 20 165 C 75 150, 105 120, 150 125 S 230 145, 270 115 S 355 85, 460 70"
-              ></path>
-              <circle cx="20" cy="165" r="5"></circle>
-              <circle cx="100" cy="138" r="5"></circle>
-              <circle cx="180" cy="133" r="5"></circle>
-              <circle cx="260" cy="118" r="5"></circle>
-              <circle cx="340" cy="93" r="5"></circle>
-              <circle cx="460" cy="70" r="5"></circle>
-            </svg>
-            <div class="chart-labels">
-              <span>Week 1</span>
-              <span>Week 2</span>
-              <span>Week 3</span>
-              <span>Week 4</span>
-              <span>Week 5</span>
-              <span>Week 6</span>
-            </div>
+            <svg viewBox="0 0 480 220" role="img" aria-hidden="true" data-profile-trend-svg></svg>
+            <div class="chart-empty-state" data-profile-trend-empty>No trend data yet</div>
+            <div class="chart-labels" data-profile-trend-labels></div>
           </div>
         </article>
 

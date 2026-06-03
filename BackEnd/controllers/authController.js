@@ -1,5 +1,22 @@
 const User = require('../config/User');
 const jwt = require('jsonwebtoken');
+const { spawn } = require('child_process');
+const path = require('path');
+
+const pythonCommand = process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
+const predictionScriptPath = path.join(__dirname, "..", "ML", "predict.py");
+const ML_FEATURE_KEYS = [
+  "degree_level",
+  "study_mode",
+  "funding_status",
+  "program_year",
+  "weekly_hours",
+  "supervisor_freq",
+  "caregiving",
+  "productivity_index",
+  "coping_index",
+  "stressor_index",
+];
 
 // Helper: generate JWT token
 const generateToken = (id) => {
@@ -30,27 +47,75 @@ const addCheckInCheckpoint = (user) => {
     user.checkpoints.push(today);
   }
 
-  user.checkpoints = user.checkpoints.slice(-3);
+  user.checkpoints = user.checkpoints.slice(-5);
 };
 
-const calculateWellBeingScore = (responses) => {
-  const numericEntries = Object.entries(responses || {})
-    .map(([key, value]) => ({ key, value: Number(value) }))
-    .filter((entry) => Number.isFinite(entry.value));
+const clampScore = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 
-  if (!numericEntries.length) {
-    return 0;
+const getMlFeaturePayload = (responses) => {
+  const payload = {};
+  const missingFields = [];
+
+  ML_FEATURE_KEYS.forEach((key) => {
+    const value = Number(responses[key]);
+
+    if (!Number.isFinite(value)) {
+      missingFields.push(key);
+      return;
+    }
+
+    payload[key] = value;
+  });
+
+  return { payload, missingFields };
+};
+
+const predictWellbeing = (responses) => {
+  const { payload, missingFields } = getMlFeaturePayload(responses);
+
+  if (missingFields.length) {
+    return Promise.reject(new Error(`Missing required check-in fields: ${missingFields.join(", ")}`));
   }
 
-  const normalizedTotal = numericEntries.reduce((total, entry) => {
-    // Heuristic: Sheet 4's "mental well-being" is a 1-10 scale.
-    // Others are 1-5. We check the key for "mental" or if value > 5.
-    const isTenScale = entry.key.toLowerCase().includes("mental") || entry.value > 5;
-    const maxValue = isTenScale ? 10 : 5;
-    return total + (entry.value / maxValue) * 100;
-  }, 0);
+  return new Promise((resolve, reject) => {
+    const py = spawn(pythonCommand, [predictionScriptPath, JSON.stringify({ responses: payload })]);
+    let result = "";
+    let error = "";
 
-  return Math.round(normalizedTotal / numericEntries.length);
+    py.stdout.on("data", (data) => {
+      result += data.toString();
+    });
+
+    py.stderr.on("data", (data) => {
+      error += data.toString();
+    });
+
+    py.on("error", (err) => {
+      reject(new Error(`Unable to start Python process: ${err.message}`));
+    });
+
+    py.on("close", (code) => {
+      try {
+        const prediction = result ? JSON.parse(result) : {};
+
+        if (code !== 0 || prediction.error) {
+          reject(new Error(prediction.error || error || "Prediction failed"));
+          return;
+        }
+
+        const score = Number(prediction.overall_wellbeing);
+
+        if (!Number.isFinite(score)) {
+          reject(new Error("Prediction did not return overall_wellbeing"));
+          return;
+        }
+
+        resolve(Math.round(clampScore(score)));
+      } catch (err) {
+        reject(new Error(error || "Prediction returned invalid JSON"));
+      }
+    });
+  });
 };
 
 const protect = async (req, res, next) => {
@@ -178,7 +243,7 @@ const submitCheckIn = async (req, res) => {
       return res.status(400).json({ error: "Name is required" });
     }
 
-    const score = calculateWellBeingScore(checkInResponses);
+    const score = await predictWellbeing(checkInResponses);
 
     if (name) {
       req.user.name = name;

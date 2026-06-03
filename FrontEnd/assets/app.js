@@ -69,7 +69,8 @@ const navigateWithTransition = (href) => {
   }, transitionDuration);
 };
 
-const isLocalFrontend = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+// Treat file:// and common local hostnames as local frontend (use local API)
+const isLocalFrontend = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname);
 const API_ROOT_URL = isLocalFrontend ? "http://127.0.0.1:3000/api" : "https://mindscope-nx7y.onrender.com/api";
 const API_BASE_URL = `${API_ROOT_URL}/auth`;
 const currentPage = window.location.pathname.split("/").pop() || "index.html";
@@ -302,6 +303,25 @@ const sheetTabs = Array.from(document.querySelectorAll("[data-sheet-tab]"));
 const sheetBackButton = document.querySelector("[data-sheet-back]");
 const sheetNextButton = document.querySelector("[data-sheet-next]");
 const sheetSubmitButton = document.querySelector("[data-sheet-submit]");
+const ML_FEATURE_KEYS = [
+  "degree_level",
+  "study_mode",
+  "funding_status",
+  "program_year",
+  "weekly_hours",
+  "supervisor_freq",
+  "caregiving",
+  "productivity_index",
+  "coping_index",
+  "stressor_index",
+];
+
+const getMlFeaturePayload = (responses) => {
+  return ML_FEATURE_KEYS.reduce((payload, key) => {
+    payload[key] = Number(responses[key]);
+    return payload;
+  }, {});
+};
 
 if (formWindow && minimizeWindowButton && restoreWindowButton && closeWindowButton) {
   const setMinimizedState = (isMinimized) => {
@@ -335,35 +355,6 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
     ? Array.from(referenceForm.querySelectorAll("select, textarea, input"))
     : [];
 
-  const sumResponses = (responses, prefix, count, reverseScoredItems = []) => {
-    return Array.from({ length: count }, (_, index) => index + 1).reduce((total, itemNumber) => {
-      const value = Number(responses[`${prefix}_${itemNumber}`]);
-      const scoredValue = reverseScoredItems.includes(itemNumber) ? 4 - value : value;
-      return total + scoredValue;
-    }, 0);
-  };
-
-  const roundFeature = (value, digits = 2) => Number(value.toFixed(digits));
-
-  const addCalculatedFeatures = (responses) => {
-    const pssScore = sumResponses(responses, "pss", 10, [4, 5, 7, 8]);
-    const gad7Score = sumResponses(responses, "gad7", 7);
-    const phq9Score = sumResponses(responses, "phq9", 9);
-    const productivityIndex = Number(responses.productivity_index);
-    const copingIndex = Number(responses.coping_index);
-    const stressorIndex = Number(responses.stressor_index);
-
-    responses.pss_score = pssScore;
-    responses.gad7_score = gad7Score;
-    responses.phq9_score = phq9Score;
-    responses.distress_total = pssScore + gad7Score + phq9Score;
-    responses.distress_normalized = roundFeature(((pssScore / 40) + (gad7Score / 21) + (phq9Score / 27)) / 3, 4);
-    responses.coping_productivity_balance = roundFeature(copingIndex - productivityIndex);
-    responses.stressor_coping_gap = roundFeature(stressorIndex - copingIndex);
-
-    return responses;
-  };
-
   const collectCheckInResponses = () => {
     const responses = {};
 
@@ -382,7 +373,7 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
       }
     });
 
-    return addCalculatedFeatures(responses);
+    return responses;
   };
 
   const getCheckInName = () => {
@@ -509,6 +500,174 @@ const formatDate = (value) => {
   }).format(new Date(value));
 };
 
+const formatCompactDate = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(value));
+};
+
+const getRecentTrendPoints = (user) => {
+  const scores = Array.isArray(user.trend)
+    ? user.trend.map(Number).filter(Number.isFinite).slice(-5)
+    : [];
+  const checkpoints = Array.isArray(user.checkpoints) ? user.checkpoints.slice(-5) : [];
+  const offset = Math.max(0, checkpoints.length - scores.length);
+
+  return scores.map((score, index) => ({
+    score: Math.round(clampScore(score)),
+    label: checkpoints[index + offset] ? formatCompactDate(checkpoints[index + offset]) : `Check-in ${index + 1}`,
+  }));
+};
+
+const getTrendState = (points) => {
+  if (points.length < 2) {
+    return {
+      key: "baseline",
+      title: "Baseline established",
+      note: points.length ? "One score recorded. More check-ins will show direction." : "Submit a check-in to start tracking your pattern.",
+      status: "Need more data",
+    };
+  }
+
+  const firstScore = points[0].score;
+  const lastScore = points[points.length - 1].score;
+  const delta = lastScore - firstScore;
+
+  if (delta <= -5) {
+    return {
+      key: "declining",
+      title: "Declining health alert",
+      note: `${Math.abs(delta)} point drop across recent check-ins.`,
+      status: "Declining",
+    };
+  }
+
+  if (delta >= 5) {
+    return {
+      key: "improving",
+      title: "Improving well-being",
+      note: `${delta} point gain across recent check-ins.`,
+      status: "Improving",
+    };
+  }
+
+  return {
+    key: "steady",
+    title: "Steady well-being arc",
+    note: "Recent scores are staying within a stable range.",
+    status: "Steady",
+  };
+};
+
+const renderTrendCard = (points) => {
+  const trendTitle = document.querySelector("[data-profile-trend-title]");
+  const trendNote = document.querySelector("[data-profile-trend-note]");
+  const trendImage = document.querySelector("[data-profile-trend-image]");
+  const accentCard = trendTitle ? trendTitle.closest(".accent-card") : null;
+  const state = getTrendState(points);
+
+  if (trendTitle) {
+    trendTitle.textContent = state.title;
+  }
+
+  if (trendNote) {
+    trendNote.textContent = state.note;
+  }
+
+  if (accentCard) {
+    accentCard.dataset.trendState = state.key;
+  }
+
+  if (trendImage) {
+    trendImage.style.display = state.key === "declining" ? "none" : "";
+  }
+
+  if (accentCard) {
+    const existingAlert = accentCard.querySelector("[data-trend-alert-mark]");
+
+    if (state.key === "declining") {
+      if (!existingAlert) {
+        const alertMark = document.createElement("div");
+        alertMark.className = "trend-alert-mark";
+        alertMark.dataset.trendAlertMark = "true";
+        alertMark.setAttribute("aria-label", "Declining trend warning");
+        alertMark.textContent = "!";
+        accentCard.appendChild(alertMark);
+      }
+    } else if (existingAlert) {
+      existingAlert.remove();
+    }
+  }
+};
+
+const renderTrendChart = (points) => {
+  const chart = document.querySelector("[data-profile-trend-chart]");
+  const svg = document.querySelector("[data-profile-trend-svg]");
+  const labels = document.querySelector("[data-profile-trend-labels]");
+  const emptyState = document.querySelector("[data-profile-trend-empty]");
+  const status = document.querySelector("[data-profile-trend-status]");
+  const state = getTrendState(points);
+
+  if (!chart || !svg || !labels || !emptyState) {
+    return;
+  }
+
+  chart.dataset.trendState = state.key;
+
+  if (status) {
+    status.textContent = state.status;
+  }
+
+  if (!points.length) {
+    svg.innerHTML = "";
+    labels.innerHTML = "";
+    emptyState.hidden = false;
+    return;
+  }
+
+  emptyState.hidden = true;
+
+  const width = 480;
+  const height = 220;
+  const paddingX = 24;
+  const paddingY = 24;
+  const drawableWidth = width - paddingX * 2;
+  const drawableHeight = height - paddingY * 2;
+  const coordinates = points.map((point, index) => {
+    const x = points.length === 1
+      ? width / 2
+      : paddingX + (drawableWidth * index) / (points.length - 1);
+    const y = paddingY + drawableHeight * (1 - point.score / 100);
+
+    return { ...point, x, y };
+  });
+
+  const pathData = coordinates.length === 1
+    ? ""
+    : coordinates.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" ");
+  const line = pathData ? `<path d="${pathData}"></path>` : "";
+  const circles = coordinates
+    .map((point) => `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="5"><title>${point.label}: ${point.score} / 100</title></circle>`)
+    .join("");
+
+  svg.innerHTML = `${line}${circles}`;
+  labels.style.gridTemplateColumns = `repeat(${points.length}, minmax(0, 1fr))`;
+  labels.innerHTML = points
+    .map((point) => `<span><strong>${point.score}</strong>${point.label}</span>`)
+    .join("");
+};
+
+const renderProfileTrend = (user) => {
+  const points = getRecentTrendPoints(user);
+  renderTrendCard(points);
+  renderTrendChart(points);
+};
+
 const renderProfile = (user) => {
   if (!user || currentPage !== "profile.html") {
     return;
@@ -556,8 +715,10 @@ const renderProfile = (user) => {
     emailReminder.checked = user.emailReminder !== false;
   }
 
+  renderProfileTrend(user);
+
   if (timeline) {
-    const checkpoints = Array.isArray(user.checkpoints) ? user.checkpoints.slice(-3).reverse() : [];
+    const checkpoints = Array.isArray(user.checkpoints) ? user.checkpoints.slice(-5).reverse() : [];
 
     timeline.innerHTML = checkpoints.length
       ? checkpoints
@@ -617,14 +778,12 @@ const getLocalSentiment = (responses) => {
 };
 
 const getLocalWellbeingScore = (responses) => {
-  const distressNormalized = Number(responses.distress_normalized || 0);
   const copingIndex = Number(responses.coping_index || 3);
   const productivityIndex = Number(responses.productivity_index || 3);
   const stressorIndex = Number(responses.stressor_index || 3);
-  const baseScore = 100 - distressNormalized * 70;
-  const supportAdjustment = (copingIndex - 3) * 6 + (productivityIndex - 3) * 4 - (stressorIndex - 3) * 5;
+  const supportAdjustment = (copingIndex - 3) * 10 + (productivityIndex - 3) * 8 - (stressorIndex - 3) * 12;
 
-  return Math.round(clampScore(baseScore + supportAdjustment));
+  return Math.round(clampScore(65 + supportAdjustment));
 };
 
 const getFactorContributions = (responses) => {
@@ -672,7 +831,7 @@ const fetchMlPrediction = async (responses) => {
     const response = await fetch(`${API_ROOT_URL}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ responses }),
+      body: JSON.stringify({ responses: getMlFeaturePayload(responses) }),
     });
 
     if (!response.ok) {
@@ -693,10 +852,9 @@ const getSentimentText = (responses) => {
   }
 
   return [
-    `Risk level ${responses.risk_level || "not specified"}`,
-    `stress ${responses.pss_score || 0}`,
-    `anxiety ${responses.gad7_score || 0}`,
-    `mood ${responses.phq9_score || 0}`,
+    `weekly hours ${responses.weekly_hours || 0}`,
+    `stressor ${responses.stressor_index || 0}`,
+    `productivity ${responses.productivity_index || 0}`,
     `coping ${responses.coping_index || 0}`,
   ].join(" ");
 };
@@ -714,9 +872,13 @@ const getStateOfMindLabel = (score) => {
 };
 
 const getOverallWellbeingFromPrediction = (prediction) => {
-  const stressScore = Number(prediction.stress_score || 0);
-  const anxietyScore = Number(prediction.anxiety_score || 0);
-  const depressionScore = Number(prediction.depression_score || prediction.wellbeing_score || 0);
+  if (Number.isFinite(Number(prediction.overall_wellbeing))) {
+    return Math.round(clampScore(Number(prediction.overall_wellbeing)));
+  }
+
+  const stressScore = Number(prediction.pss_score || prediction.stress_score || 0);
+  const anxietyScore = Number(prediction.gad7_score || prediction.anxiety_score || 0);
+  const depressionScore = Number(prediction.phq9_score || prediction.depression_score || 0);
   const normalizedDistress = (stressScore / 40 + anxietyScore / 21 + depressionScore / 27) / 3;
 
   return Math.round(clampScore(100 - normalizedDistress * 100));
@@ -747,6 +909,17 @@ const generateAndStoreLatestInsight = async (responses) => {
   const prediction = await fetchMlPrediction(responses);
   const sentiment = await fetchSentimentScore(responses);
   const overallWellbeing = prediction ? getOverallWellbeingFromPrediction(prediction) : getLocalWellbeingScore(responses);
+  const enrichedResponses = prediction
+    ? {
+        ...responses,
+        pss_score: prediction.pss_score ?? prediction.stress_score,
+        gad7_score: prediction.gad7_score ?? prediction.anxiety_score,
+        phq9_score: prediction.phq9_score ?? prediction.depression_score,
+        distress_total: prediction.distress_total,
+        distress_normalized: prediction.distress_normalized,
+        overall_wellbeing: overallWellbeing,
+      }
+    : responses;
   const insight = {
     generatedAt: new Date().toISOString(),
     responseSignature: getResponseSignature(responses),
@@ -755,10 +928,10 @@ const generateAndStoreLatestInsight = async (responses) => {
     stateOfMind: getStateOfMindLabel(sentiment),
     source: prediction ? "AI Prediction" : "Local Estimate",
     prediction,
-    factors: getFactorContributions(responses),
+    factors: getFactorContributions(enrichedResponses),
   };
 
-  localStorage.setItem("lastCheckInResponses", JSON.stringify(responses));
+  localStorage.setItem("lastCheckInResponses", JSON.stringify(enrichedResponses));
   saveLatestInsight(insight);
 
   return insight;

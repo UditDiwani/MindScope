@@ -7,18 +7,30 @@ from sklearn.ensemble import RandomForestRegressor
 BASE_DIR = Path(__file__).resolve().parent
 DATASET_PATH = BASE_DIR / "AI_Scholar_Survey_Dataset.xlsx"
 MODEL_PATH = BASE_DIR / "model.pkl"
+FEATURE_COLUMNS = [
+    "degree_level",
+    "study_mode",
+    "funding_status",
+    "program_year",
+    "weekly_hours",
+    "supervisor_freq",
+    "caregiving",
+    "productivity_index",
+    "coping_index",
+    "stressor_index",
+]
 TARGET_COLUMNS = ["pss_score", "gad7_score", "phq9_score"]
-DROP_COLUMNS = TARGET_COLUMNS + ["risk_level"]
 
 
 def train_model():
     data = pd.read_excel(DATASET_PATH)
-    missing_columns = [column for column in DROP_COLUMNS if column not in data.columns]
+    required_columns = FEATURE_COLUMNS + TARGET_COLUMNS
+    missing_columns = [column for column in required_columns if column not in data.columns]
 
     if missing_columns:
         raise ValueError(f"Dataset is missing required columns: {missing_columns}")
 
-    X = data.drop(columns=DROP_COLUMNS)
+    X = data[FEATURE_COLUMNS]
     y = data[TARGET_COLUMNS]
 
     model = RandomForestRegressor(
