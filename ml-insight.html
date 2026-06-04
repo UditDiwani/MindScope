@@ -69,6 +69,25 @@
         </div>
       </section>
 
+      <section class="feedback-panel glass-panel" data-feedback-panel hidden>
+        <div class="panel-heading">
+          <h2>Do you agree with the overall well-being predicted?</h2>
+          <span class="status-pill" data-feedback-status>Feedback pending</span>
+        </div>
+        <div class="feedback-actions" data-feedback-choice>
+          <button type="button" class="primary-button" data-feedback-yes>Yes</button>
+          <button type="button" class="secondary-button" data-feedback-no>No</button>
+        </div>
+        <div class="feedback-manual" data-feedback-manual hidden>
+          <button type="button" class="secondary-button" data-feedback-retry>Retry Prediction</button>
+          <label>
+            <span>Manual Score Input (0-100)</span>
+            <input type="number" min="0" max="100" step="1" data-feedback-score placeholder="Enter score" />
+          </label>
+          <button type="button" class="primary-button" data-feedback-submit-score>Submit Score</button>
+        </div>
+      </section>
+
       <section class="factor-panel glass-panel" data-factor-panel hidden>
         <div class="panel-heading">
           <h2>Top contributing factors</h2>
