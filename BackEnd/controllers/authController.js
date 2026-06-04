@@ -34,6 +34,7 @@ const publicUser = (user) => ({
   emailReminder: user.emailReminder,
   checkpoints: user.checkpoints,
   hasCompletedCheckIn: user.hasCompletedCheckIn,
+  latestCheckIn: user.latestCheckIn,
 });
 
 const toDateKey = (value) => new Date(value).toISOString().slice(0, 10);
@@ -253,6 +254,11 @@ const submitCheckIn = async (req, res) => {
     req.user.last_score = score;
     req.user.trend.push(score);
     req.user.streak = (req.user.streak || 0) + 1;
+    req.user.latestCheckIn = {
+      name: name || req.user.name,
+      responses: checkInResponses,
+      savedAt: new Date(),
+    };
     addCheckInCheckpoint(req.user);
 
     await req.user.save();
@@ -262,6 +268,34 @@ const submitCheckIn = async (req, res) => {
     console.error("Check-in submit error:", err.message);
     res.status(500).json({ error: "Server error during check-in submission" });
   }
+};
+
+const saveLatestCheckIn = async (req, res) => {
+  try {
+    const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
+    const responses = req.body.responses;
+
+    if (!responses || typeof responses !== "object" || Array.isArray(responses)) {
+      return res.status(400).json({ error: "Check-in responses are required" });
+    }
+
+    req.user.latestCheckIn = {
+      name: name || req.user.name,
+      responses,
+      savedAt: new Date(),
+    };
+
+    await req.user.save();
+
+    res.status(200).json({ latestCheckIn: req.user.latestCheckIn });
+  } catch (err) {
+    console.error("Latest check-in save error:", err.message);
+    res.status(500).json({ error: "Server error saving latest check-in" });
+  }
+};
+
+const getLatestCheckIn = async (req, res) => {
+  res.json({ latestCheckIn: req.user.latestCheckIn || null });
 };
 
 const updatePreferences = async (req, res) => {
@@ -296,6 +330,8 @@ module.exports = {
   authenticateUser,
   getCurrentUser,
   submitCheckIn,
+  saveLatestCheckIn,
+  getLatestCheckIn,
   updatePreferences,
   protect,
 };

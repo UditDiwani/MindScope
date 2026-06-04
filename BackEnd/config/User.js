@@ -45,6 +45,10 @@ const user_schema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    latestCheckIn: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null
+    },
 }, { timestamps : true});
 
 

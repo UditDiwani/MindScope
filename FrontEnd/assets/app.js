@@ -73,6 +73,7 @@ const navigateWithTransition = (href) => {
 const isLocalFrontend = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname);
 const API_ROOT_URL = isLocalFrontend ? "http://127.0.0.1:3000/api" : "https://mindscope-nx7y.onrender.com/api";
 const API_BASE_URL = `${API_ROOT_URL}/auth`;
+const API_BUFFER_URL = `${API_ROOT_URL}/buffer`;
 const currentPage = window.location.pathname.split("/").pop() || "index.html";
 
 const getStoredUser = () => {
@@ -103,6 +104,7 @@ const saveStoredUser = (user) => {
       preference: user.preference || "Weekly",
       emailReminder: user.emailReminder !== false,
       trend: user.trend || [],
+      latestCheckIn: user.latestCheckIn || null,
     })
   );
 };
@@ -303,6 +305,8 @@ const sheetTabs = Array.from(document.querySelectorAll("[data-sheet-tab]"));
 const sheetBackButton = document.querySelector("[data-sheet-back]");
 const sheetNextButton = document.querySelector("[data-sheet-next]");
 const sheetSubmitButton = document.querySelector("[data-sheet-submit]");
+const restoreCheckInButton = document.querySelector("[data-restore-checkin]");
+const restoreCheckInStatus = document.querySelector("[data-restore-status]");
 const ML_FEATURE_KEYS = [
   "degree_level",
   "study_mode",
@@ -372,7 +376,6 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
         responses[responseKey] = shouldUseNumber ? Number(field.value) : field.value.trim();
       }
     });
-
     return responses;
   };
 
@@ -420,6 +423,106 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
     }
   };
 
+  const setRestoreStatus = (message) => {
+    if (restoreCheckInStatus) {
+      restoreCheckInStatus.textContent = message;
+    }
+  };
+
+  const getLocalLatestCheckIn = () => {
+    try {
+      const storedResponses = JSON.parse(localStorage.getItem("lastCheckInResponses") || "{}");
+      const storedUser = getStoredUser();
+
+      if (!Object.keys(storedResponses).length) {
+        return null;
+      }
+
+      return {
+        name: storedUser && storedUser.name ? storedUser.name : "",
+        responses: storedResponses,
+      };
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const fetchLatestCheckIn = async () => {
+    const token = getAuthToken();
+
+    if (!token) {
+      throw new Error("Login required to restore previous check-in");
+    }
+
+    const response = await fetch(`${API_BASE_URL}/latest-check-in`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Unable to restore previous check-in");
+    }
+
+    return data.latestCheckIn;
+  };
+
+  const applyLatestCheckIn = (latestCheckIn) => {
+    const responses = latestCheckIn && latestCheckIn.responses ? latestCheckIn.responses : null;
+
+    if (!responses || !Object.keys(responses).length) {
+      return false;
+    }
+
+    const nameField = referenceForm.querySelector("[data-user-name]");
+
+    if (nameField && latestCheckIn.name) {
+      nameField.value = latestCheckIn.name;
+    }
+
+    formFields.forEach((field) => {
+      if (field.matches("[data-user-name]") || !field.name || responses[field.name] === undefined) {
+        return;
+      }
+
+      field.value = responses[field.name];
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    updateSubmitState();
+    return true;
+  };
+
+  const restoreLatestCheckIn = async ({ manual = false } = {}) => {
+    if (manual) {
+      setRestoreStatus("Restoring...");
+    }
+
+    try {
+      const latestCheckIn = await fetchLatestCheckIn();
+      const applied = applyLatestCheckIn(latestCheckIn);
+
+      setRestoreStatus(applied ? "Previous check-in restored." : "No previous check-in found.");
+      return applied;
+    } catch (error) {
+      const fallback = getLocalLatestCheckIn();
+      const applied = applyLatestCheckIn(fallback);
+
+      if (applied) {
+        setRestoreStatus("Restored from this browser.");
+        return true;
+      }
+
+      if (manual) {
+        setRestoreStatus(error.message);
+      }
+
+      return false;
+    }
+  };
+
   formFields.forEach((field) => {
     field.addEventListener("input", updateSubmitState);
     field.addEventListener("change", updateSubmitState);
@@ -438,6 +541,14 @@ if (questionSheets.length && sheetTabs.length && sheetBackButton && sheetNextBut
   sheetNextButton.addEventListener("click", () => {
     setActiveSheet(activeSheet + 1);
   });
+
+  if (restoreCheckInButton) {
+    restoreCheckInButton.addEventListener("click", () => {
+      restoreLatestCheckIn({ manual: true });
+    });
+  }
+
+  restoreLatestCheckIn();
 
   referenceForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -989,7 +1100,7 @@ const renderMlInsight = async () => {
     return;
   }
 
-  const insight = await getOrCreateLatestInsight();
+  let insight = await getOrCreateLatestInsight();
   const scoreRing = document.querySelector("[data-score-ring]");
   const wellbeingScore = document.querySelector("[data-wellbeing-score]");
   const wellbeingLabel = document.querySelector("[data-wellbeing-label]");
@@ -998,6 +1109,61 @@ const renderMlInsight = async () => {
   const factorPanel = document.querySelector("[data-factor-panel]");
   const factorList = document.querySelector("[data-factor-list]");
   const modelSource = document.querySelector("[data-model-source]");
+  const feedbackPanel = document.querySelector("[data-feedback-panel]");
+  const feedbackStatus = document.querySelector("[data-feedback-status]");
+  const feedbackYes = document.querySelector("[data-feedback-yes]");
+  const feedbackNo = document.querySelector("[data-feedback-no]");
+  const feedbackManual = document.querySelector("[data-feedback-manual]");
+  const feedbackRetry = document.querySelector("[data-feedback-retry]");
+  const feedbackScore = document.querySelector("[data-feedback-score]");
+  const feedbackSubmitScore = document.querySelector("[data-feedback-submit-score]");
+
+  const setFeedbackStatus = (message) => {
+    if (feedbackStatus) {
+      feedbackStatus.textContent = message;
+    }
+  };
+
+  const renderInsightValues = (currentInsight) => {
+    if (scoreRing) {
+      scoreRing.style.setProperty("--score", `${currentInsight.overallWellbeing}%`);
+    }
+
+    if (wellbeingScore) {
+      wellbeingScore.textContent = currentInsight.overallWellbeing;
+    }
+
+    if (wellbeingLabel) {
+      wellbeingLabel.textContent = `${currentInsight.overallWellbeing} / 100`;
+    }
+
+    if (sentimentScore) {
+      sentimentScore.textContent = `${currentInsight.stateOfMind} (${Number(currentInsight.sentimentScore).toFixed(2)})`;
+    }
+
+    if (modelSource) {
+      modelSource.textContent = currentInsight.source || "Latest Insight";
+    }
+
+    if (factorList) {
+      factorList.innerHTML = (currentInsight.factors || [])
+        .map((factor) => {
+          const width = Math.max(10, Math.round(factor.impact * 100));
+          return `
+            <div class="factor-row">
+              <div>
+                <strong>${factor.label}</strong>
+                <span>${factor.direction === "higher" ? "Higher supports score" : "Lower supports score"} - ${factor.value}</span>
+              </div>
+              <div class="factor-meter" aria-hidden="true">
+                <i style="width: ${width}%"></i>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+  };
 
   if (!insight) {
     if (wellbeingLabel) {
@@ -1007,51 +1173,133 @@ const renderMlInsight = async () => {
   }
 
   window.setTimeout(() => {
-    if (scoreRing) {
-      scoreRing.style.setProperty("--score", `${insight.overallWellbeing}%`);
-    }
+    renderInsightValues(insight);
 
-    if (wellbeingScore) {
-      wellbeingScore.textContent = insight.overallWellbeing;
-    }
-
-    if (wellbeingLabel) {
-      wellbeingLabel.textContent = `${insight.overallWellbeing} / 100`;
-    }
-
-    if (sentimentScore) {
-      sentimentScore.textContent = `${insight.stateOfMind} (${Number(insight.sentimentScore).toFixed(2)})`;
-    }
-
-    if (modelSource) {
-      modelSource.textContent = insight.source || "Latest Insight";
+    if (feedbackPanel) {
+      feedbackPanel.hidden = false;
     }
   }, 2600);
-
-  if (factorList) {
-    factorList.innerHTML = (insight.factors || [])
-      .map((factor) => {
-        const width = Math.max(10, Math.round(factor.impact * 100));
-        return `
-          <div class="factor-row">
-            <div>
-              <strong>${factor.label}</strong>
-              <span>${factor.direction === "higher" ? "Higher supports score" : "Lower supports score"} - ${factor.value}</span>
-            </div>
-            <div class="factor-meter" aria-hidden="true">
-              <i style="width: ${width}%"></i>
-            </div>
-          </div>
-        `;
-      })
-      .join("");
-  }
 
   if (factorToggle && factorPanel) {
     factorToggle.addEventListener("click", () => {
       const isHidden = factorPanel.hidden;
       factorPanel.hidden = !isHidden;
       factorToggle.textContent = isHidden ? "Hide Details" : "Show Details";
+    });
+  }
+
+  const setFeedbackDisabled = (isDisabled) => {
+    [feedbackYes, feedbackNo, feedbackRetry, feedbackScore, feedbackSubmitScore].forEach((control) => {
+      if (control) {
+        control.disabled = isDisabled;
+      }
+    });
+  };
+
+  const buildFeedbackRecord = (overallWellbeing) => {
+    const responses = getLastCheckInResponses();
+    const prediction = insight.prediction || {};
+
+    return {
+      caregiving: responses.caregiving,
+      coping_index: responses.coping_index,
+      coping_support_note: responses.coping_support_note,
+      degree_level: responses.degree_level,
+      funding_status: responses.funding_status,
+      primary_stressor_note: responses.primary_stressor_note,
+      productivity_index: responses.productivity_index,
+      program_year: responses.program_year,
+      stressor_index: responses.stressor_index,
+      study_mode: responses.study_mode,
+      supervisor_freq: responses.supervisor_freq,
+      weekly_hours: responses.weekly_hours,
+      gad7_score: responses.gad7_score ?? prediction.gad7_score ?? prediction.anxiety_score,
+      overall_wellbeing: overallWellbeing,
+      phq9_score: responses.phq9_score ?? prediction.phq9_score ?? prediction.depression_score,
+      pss_score: responses.pss_score ?? prediction.pss_score ?? prediction.stress_score,
+    };
+  };
+
+  const submitFeedback = async (overallWellbeing) => {
+    const token = getAuthToken();
+
+    if (!token) {
+      setFeedbackStatus("Login required to submit feedback.");
+      return;
+    }
+
+    setFeedbackDisabled(true);
+    setFeedbackStatus("Submitting...");
+
+    try {
+      const response = await fetch(`${API_BUFFER_URL}/feedback`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(buildFeedbackRecord(overallWellbeing)),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to submit feedback");
+      }
+
+      setFeedbackStatus("Feedback submitted.");
+    } catch (error) {
+      setFeedbackStatus(error.message);
+      setFeedbackDisabled(false);
+    }
+  };
+
+  if (feedbackYes) {
+    feedbackYes.addEventListener("click", () => {
+      submitFeedback(insight.overallWellbeing);
+    });
+  }
+
+  if (feedbackNo && feedbackManual) {
+    feedbackNo.addEventListener("click", () => {
+      feedbackManual.hidden = false;
+      setFeedbackStatus("Retry prediction or enter your score.");
+    });
+  }
+
+  if (feedbackRetry) {
+    feedbackRetry.addEventListener("click", async () => {
+      const responses = getLastCheckInResponses();
+
+      if (!Object.keys(responses).length) {
+        setFeedbackStatus("No check-in found to retry.");
+        return;
+      }
+
+      feedbackRetry.disabled = true;
+      setFeedbackStatus("Retrying prediction...");
+
+      try {
+        insight = await generateAndStoreLatestInsight(responses);
+        renderInsightValues(insight);
+        setFeedbackStatus("Review the new prediction.");
+      } catch (error) {
+        setFeedbackStatus("Unable to retry prediction.");
+      } finally {
+        feedbackRetry.disabled = false;
+      }
+    });
+  }
+
+  if (feedbackSubmitScore && feedbackScore) {
+    feedbackSubmitScore.addEventListener("click", () => {
+      const manualScore = Number(feedbackScore.value);
+
+      if (!Number.isFinite(manualScore) || manualScore < 0 || manualScore > 100) {
+        setFeedbackStatus("Enter a score from 0 to 100.");
+        return;
+      }
+
+      submitFeedback(Math.round(manualScore));
     });
   }
 };

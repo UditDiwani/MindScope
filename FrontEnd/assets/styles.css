@@ -1440,6 +1440,23 @@ textarea:focus {
   gap: 12px;
 }
 
+.restore-checkin-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.restore-checkin-bar .secondary-button {
+  padding: 0.65rem 0.95rem;
+}
+
+.restore-checkin-bar span {
+  color: #1b5e20;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .reference-actions .sheet-next,
 .reference-actions .sheet-submit {
   margin-left: auto;
@@ -1687,6 +1704,37 @@ textarea:focus {
 .factor-panel {
   border-radius: var(--radius-lg);
   padding: 24px;
+}
+
+.feedback-panel {
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.feedback-actions,
+.feedback-manual {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px;
+}
+
+.feedback-manual label {
+  display: grid;
+  gap: 8px;
+  min-width: min(240px, 100%);
+  color: var(--text-soft);
+  font-weight: 800;
+}
+
+.feedback-manual input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0.8rem 0.9rem;
+  background: var(--surface-strong);
+  color: var(--text-strong);
+  font: inherit;
 }
 
 .factor-list {
