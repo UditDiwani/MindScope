@@ -1080,14 +1080,37 @@ const renderInsightSummary = (insight) => {
 
   if (profileAiScore) {
     profileAiScore.textContent = `${insight.overallWellbeing} / 100`;
+    if (insight.overallWellbeing < 50) {
+      profileAiScore.style.color = "red";
+    }
+    else if(insight.overallWellbeing == 50){
+      profileAiScore.style.color = "yellow";
+    }
+    else{
+      profileAiScore.style.color = "green";
+    }
   }
 
   if (profileSentiment) {
     profileSentiment.textContent = insight.stateOfMind;
+    if (insight.sentimentScore < -0.5) {
+      profileSentiment.style.color = "red";
+    } else if (insight.sentimentScore > 0.5) {
+      profileSentiment.style.color = "green";
+    } else {
+      profileSentiment.style.color = "yellow";
+    }
   }
 
   if (profileStateScore) {
     profileStateScore.textContent = `${insight.stateOfMind} (${Number(insight.sentimentScore).toFixed(2)})`;
+    if (insight.sentimentScore < -0.5) {
+      profileStateScore.style.color = "red";
+    } else if (insight.sentimentScore > 0.5){
+      profileStateScore.style.color = "green";
+    } else {
+      profileStateScore.style.color = "yellow";
+    }
   }
 
   if (profileInsightSource) {
@@ -1127,6 +1150,15 @@ const renderMlInsight = async () => {
   const renderInsightValues = (currentInsight) => {
     if (scoreRing) {
       scoreRing.style.setProperty("--score", `${currentInsight.overallWellbeing}%`);
+      if (currentInsight.overallWellbeing < 50) {
+        wellbeingScore.style.color = "red";
+      }
+      else if(currentInsight.overallWellbeing == 50){
+        wellbeingScore.style.color = "yellow";
+      }
+      else{
+        wellbeingScore.style.color = "green";
+      }
     }
 
     if (wellbeingScore) {
@@ -1135,10 +1167,26 @@ const renderMlInsight = async () => {
 
     if (wellbeingLabel) {
       wellbeingLabel.textContent = `${currentInsight.overallWellbeing} / 100`;
+      if(currentInsight.overallWellbeing < 50){
+        wellbeingLabel.style.color = "red";
+      }
+      else if(currentInsight.overallWellbeing == 50){
+        wellbeingLabel.style.color = "yellow";
+      }
+      else{
+        wellbeingLabel.style.color = "green";
+      }
     }
 
     if (sentimentScore) {
       sentimentScore.textContent = `${currentInsight.stateOfMind} (${Number(currentInsight.sentimentScore).toFixed(2)})`;
+      if (currentInsight.sentimentScore < -0.5) {
+        sentimentScore.style.color = "red";
+      } else if (currentInsight.sentimentScore > 0.5) {
+        sentimentScore.style.color = "green";
+      } else {
+        sentimentScore.style.color = "yellow";
+      }
     }
 
     if (modelSource) {
