@@ -1706,6 +1706,8 @@ textarea:focus {
 .factor-panel {
   border-radius: var(--radius-lg);
   padding: 24px;
+  backdrop-filter: none;
+  contain: layout paint;
 }
 
 .feedback-panel {
@@ -1782,6 +1784,8 @@ textarea:focus {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--accent), var(--accent-warm));
+  transform-origin: left center;
+  will-change: transform;
   animation: meter-fill 0.9s ease both;
 }
 
@@ -1835,7 +1839,7 @@ textarea:focus {
 
 @keyframes meter-fill {
   from {
-    width: 0;
+    transform: scaleX(0);
   }
 }
 

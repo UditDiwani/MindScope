@@ -5,6 +5,7 @@ const path = require('path');
 
 const pythonCommand = process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
 const predictionScriptPath = path.join(__dirname, "..", "ML", "predict.py");
+const sentimentScriptPath = path.join(__dirname, "..", "ML", "sentiment.py");
 const ML_FEATURE_KEYS = [
   "degree_level",
   "study_mode",
@@ -30,6 +31,8 @@ const publicUser = (user) => ({
   trend: user.trend,
   streak: user.streak,
   last_score: user.last_score,
+  last_sentiment_score: user.last_sentiment_score,
+  last_state_of_mind: user.last_state_of_mind,
   preference: user.preference,
   emailReminder: user.emailReminder,
   checkpoints: user.checkpoints,
@@ -52,6 +55,83 @@ const addCheckInCheckpoint = (user) => {
 };
 
 const clampScore = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
+
+const getSentimentText = (responses) => {
+  const noteText = `${responses.primary_stressor_note || ""} ${responses.coping_support_note || ""}`.trim();
+
+  if (noteText) {
+    return noteText;
+  }
+
+  return [
+    `weekly hours ${responses.weekly_hours || 0}`,
+    `stressor ${responses.stressor_index || 0}`,
+    `productivity ${responses.productivity_index || 0}`,
+    `coping ${responses.coping_index || 0}`,
+  ].join(" ");
+};
+
+const getStateOfMindLabel = (score) => {
+  if (score >= 0.35) {
+    return "Positive";
+  }
+
+  if (score <= -0.35) {
+    return "Strained";
+  }
+
+  return "Neutral";
+};
+
+const getLocalSentiment = (text) => {
+  const lowerText = text.toLowerCase();
+  const positiveWords = ["support", "supported", "cope", "coping", "focused", "calm", "progress", "help", "manageable", "confident", "better"];
+  const negativeWords = ["stress", "deadline", "overwhelmed", "anxious", "tired", "hopeless", "pressure", "conflict", "stuck", "difficult"];
+  const positive = positiveWords.reduce((total, word) => total + (lowerText.includes(word) ? 1 : 0), 0);
+  const negative = negativeWords.reduce((total, word) => total + (lowerText.includes(word) ? 1 : 0), 0);
+
+  if (!lowerText.trim()) {
+    return 0;
+  }
+
+  return Number(((positive - negative) / Math.max(positive + negative, 1)).toFixed(3));
+};
+
+const analyzeSentiment = (responses) => {
+  const text = getSentimentText(responses);
+
+  return new Promise((resolve) => {
+    const py = spawn(pythonCommand, [sentimentScriptPath, text]);
+    let result = "";
+    let settled = false;
+    const finish = (score) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      resolve(score);
+    };
+
+    py.stdout.on("data", (data) => {
+      result += data.toString();
+    });
+
+    py.on("error", () => {
+      finish(getLocalSentiment(text));
+    });
+
+    py.on("close", () => {
+      try {
+        const sentiment = result ? JSON.parse(result) : {};
+        const score = Number(sentiment.compound);
+        finish(Number.isFinite(score) ? Number(score.toFixed(3)) : getLocalSentiment(text));
+      } catch (err) {
+        finish(getLocalSentiment(text));
+      }
+    });
+  });
+};
 
 const getMlFeaturePayload = (responses) => {
   const payload = {};
@@ -155,6 +235,9 @@ const registerUser = async (req, res) => {
       email: user.email,
       name: user.name,
       hasCompletedCheckIn: user.hasCompletedCheckIn,
+      last_score: user.last_score,
+      last_sentiment_score: user.last_sentiment_score,
+      last_state_of_mind: user.last_state_of_mind,
       preference: user.preference,
       emailReminder: user.emailReminder,
       token: generateToken(user._id),
@@ -176,6 +259,9 @@ const loginUser = async (req, res) => {
         email: user.email,
         name: user.name,
         hasCompletedCheckIn: user.hasCompletedCheckIn,
+        last_score: user.last_score,
+        last_sentiment_score: user.last_sentiment_score,
+        last_state_of_mind: user.last_state_of_mind,
         preference: user.preference,
         emailReminder: user.emailReminder,
         token: generateToken(user._id),
@@ -217,6 +303,9 @@ const authenticateUser = async (req, res) => {
       name: user.name,
       isNewUser,
       hasCompletedCheckIn: user.hasCompletedCheckIn,
+      last_score: user.last_score,
+      last_sentiment_score: user.last_sentiment_score,
+      last_state_of_mind: user.last_state_of_mind,
       preference: user.preference,
       emailReminder: user.emailReminder,
       token: generateToken(user._id),
@@ -244,7 +333,11 @@ const submitCheckIn = async (req, res) => {
       return res.status(400).json({ error: "Name is required" });
     }
 
-    const score = await predictWellbeing(checkInResponses);
+    const [score, sentimentScore] = await Promise.all([
+      predictWellbeing(checkInResponses),
+      analyzeSentiment(checkInResponses),
+    ]);
+    const stateOfMind = getStateOfMindLabel(sentimentScore);
 
     if (name) {
       req.user.name = name;
@@ -252,11 +345,16 @@ const submitCheckIn = async (req, res) => {
 
     req.user.hasCompletedCheckIn = true;
     req.user.last_score = score;
+    req.user.last_sentiment_score = sentimentScore;
+    req.user.last_state_of_mind = stateOfMind;
     req.user.trend.push(score);
     req.user.streak = (req.user.streak || 0) + 1;
     req.user.latestCheckIn = {
       name: name || req.user.name,
       responses: checkInResponses,
+      wellbeingScore: score,
+      sentimentScore,
+      stateOfMind,
       savedAt: new Date(),
     };
     addCheckInCheckpoint(req.user);

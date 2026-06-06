@@ -101,6 +101,8 @@ const saveStoredUser = (user) => {
       checkpoints: user.checkpoints || [],
       streak: user.streak || 0,
       last_score: user.last_score || 0,
+      last_sentiment_score: Number.isFinite(Number(user.last_sentiment_score)) ? Number(user.last_sentiment_score) : 0,
+      last_state_of_mind: user.last_state_of_mind || "Neutral",
       preference: user.preference || "Weekly",
       emailReminder: user.emailReminder !== false,
       trend: user.trend || [],
@@ -787,10 +789,40 @@ const renderProfile = (user) => {
   const heading = document.querySelector("[data-profile-heading]");
   const streak = document.querySelector("[data-profile-streak]");
   const score = document.querySelector("[data-profile-score]");
+  const profileAiScore = document.querySelector("[data-profile-ai-score]");
+  const profileSentiment = document.querySelector("[data-profile-sentiment]");
+  const profileStateScore = document.querySelector("[data-profile-state-score]");
+  const profileInsightSource = document.querySelector("[data-profile-insight-source]");
   const preference = document.querySelector("[data-profile-preference]");
   const timeline = document.querySelector("[data-profile-timeline]");
   const preferenceSelect = document.querySelector("[data-preference-select]");
   const emailReminder = document.querySelector("[data-email-reminder]");
+  const applyScoreColor = (element, value) => {
+    if (!element) {
+      return;
+    }
+
+    if (value < 50) {
+      element.style.color = "red";
+    } else if (value === 50) {
+      element.style.color = "yellow";
+    } else {
+      element.style.color = "green";
+    }
+  };
+  const applySentimentColor = (element, value) => {
+    if (!element) {
+      return;
+    }
+
+    if (value < -0.5) {
+      element.style.color = "red";
+    } else if (value > 0.5) {
+      element.style.color = "green";
+    } else {
+      element.style.color = "yellow";
+    }
+  };
 
   if (heading && (user.name || user.email)) {
     heading.textContent = `Welcome, ${user.name || user.email}`;
@@ -802,16 +834,34 @@ const renderProfile = (user) => {
   }
 
   if (score) {
-    score.textContent = `${Number(user.last_score || 0)} / 100`;
-    if (Number(user.last_score) <50){
-      score.style.color = "red";
+    const latestScore = Number(user.last_score || 0);
+    score.textContent = `${latestScore} / 100`;
+    applyScoreColor(score, latestScore);
+  }
+
+  if (profileAiScore) {
+    const latestScore = Number(user.last_score || 0);
+    profileAiScore.textContent = `${latestScore} / 100`;
+    applyScoreColor(profileAiScore, latestScore);
+  }
+
+  if (profileSentiment || profileStateScore) {
+    const sentimentScore = Number(user.last_sentiment_score || 0);
+    const stateOfMind = user.last_state_of_mind || "Neutral";
+
+    if (profileSentiment) {
+      profileSentiment.textContent = stateOfMind;
+      applySentimentColor(profileSentiment, sentimentScore);
     }
-    else if(Number(user.last_score) ==50){
-      score.style.color = "yellow";
-    } 
-    else{
-      score.style.color = "green";
-    } 
+
+    if (profileStateScore) {
+      profileStateScore.textContent = `${stateOfMind} (${sentimentScore.toFixed(2)})`;
+      applySentimentColor(profileStateScore, sentimentScore);
+    }
+  }
+
+  if (profileInsightSource) {
+    profileInsightSource.textContent = "Latest Check-In";
   }
 
   if (preference) {
@@ -1064,7 +1114,6 @@ const getOrCreateLatestInsight = async () => {
 };
 
 const renderInsightSummary = (insight) => {
-  const profileScore = document.querySelector("[data-profile-score]");
   const profileAiScore = document.querySelector("[data-profile-ai-score]");
   const profileSentiment = document.querySelector("[data-profile-sentiment]");
   const profileStateScore = document.querySelector("[data-profile-state-score]");
@@ -1072,10 +1121,6 @@ const renderInsightSummary = (insight) => {
 
   if (!insight) {
     return;
-  }
-
-  if (profileScore) {
-    profileScore.textContent = `${insight.overallWellbeing} / 100`;
   }
 
   if (profileAiScore) {
@@ -1355,9 +1400,16 @@ const renderMlInsight = async () => {
 renderMlInsight();
 
 if (currentPage === "profile.html") {
-  userReady.then(async () => {
-    const insight = await getOrCreateLatestInsight();
-    renderInsightSummary(insight);
+  userReady.then(async (user) => {
+    const hasPersistedSentiment = user && (
+      user.last_sentiment_score !== undefined ||
+      user.last_state_of_mind !== undefined
+    );
+
+    if (!hasPersistedSentiment) {
+      const insight = await getOrCreateLatestInsight();
+      renderInsightSummary(insight);
+    }
   });
 }
 

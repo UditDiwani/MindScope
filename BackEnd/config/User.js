@@ -29,6 +29,14 @@ const user_schema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    last_sentiment_score: {
+        type: Number,
+        default: 0
+    },
+    last_state_of_mind: {
+        type: String,
+        default: 'Neutral'
+    },
     preference: {
         type: String,
         default: 'Weekly'
